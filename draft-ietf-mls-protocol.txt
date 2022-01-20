@@ -5,7 +5,7 @@
 Network Working Group                                          R. Barnes
 Internet-Draft                                                     Cisco
 Intended status: Informational                             B. Beurdouche
-Expires: 23 July 2022                                    Inria & Mozilla
+Expires: 24 July 2022                                    Inria & Mozilla
                                                                R. Robert
                                                                         
                                                              J. Millican
@@ -14,7 +14,7 @@ Expires: 23 July 2022                                    Inria & Mozilla
                                                                   Google
                                                           K. Cohn-Gordon
                                                     University of Oxford
-                                                         19 January 2022
+                                                         20 January 2022
 
 
               The Messaging Layer Security (MLS) Protocol
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 July 2022.
+   This Internet-Draft will expire on 24 July 2022.
 
 Copyright Notice
 
@@ -1905,9 +1905,9 @@ psk_secret (or 0) -> KDF.Extract
    Note that, as a PSK may have a different lifetime than an update, it
    does not necessarily provide the same Forward Secrecy (FS) or Post-
    Compromise Security (PCS) guarantees as a Commit message.  Unlike the
-   key pairs populated in the tree by an Update or Commit, which always
-   freshly generated, PSKs may be pre-distributed and stored.  This
-   creates the risk that a PSK may be compromised in the process of
+   key pairs populated in the tree by an Update or Commit, which are
+   always freshly generated, PSKs may be pre-distributed and stored.
+   This creates the risk that a PSK may be compromised in the process of
    distribution and storage.  The security that the group gets from
    injecting a PSK thus depends on both the entropy of the PSK and the
    risk of compromise.  These factors are outside of the scope of this
