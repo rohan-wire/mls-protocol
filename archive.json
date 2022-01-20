@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-01-16T01:14:10.438641+00:00",
+  "timestamp": "2022-01-20T01:16:11.030241+00:00",
   "repo": "mlswg/mls-protocol",
   "labels": [
     {
@@ -4974,15 +4974,15 @@
       "id": "I_kwDOBoyH6c4-Rwzj",
       "title": "Consolidate resumption PSK definitions",
       "url": "https://github.com/mlswg/mls-protocol/issues/502",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "bifurcation",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "Right now, we treat the re-init and branch PSK cases as distinct cases, as opposed to just having a general \"export PSK from one group+epoch, insert it into another\" function.  What I would call a \"resumption PSK\", following TLS.   Even though we have the distinction, the content of the PSK itself is the same: (group ID, epoch, resumption secret).  So the only difference is that the PreSharedKeyID has a bit that signals the intent of injecting this resumption PSK.\r\n\r\nDo we really need that bit?  If there's not a compelling need, it would streamline the API and allow for more flexibility if we just had the notion of a resumption PSK.",
       "createdAt": "2021-11-04T14:47:01Z",
-      "updatedAt": "2021-12-17T06:15:36Z",
-      "closedAt": null,
+      "updatedAt": "2022-01-19T17:12:59Z",
+      "closedAt": "2022-01-19T17:12:59Z",
       "comments": [
         {
           "author": "kkohbrok",
@@ -5102,6 +5102,13 @@
           "body": "That seems like a well-reasoned solution. ",
           "createdAt": "2021-12-17T06:15:35Z",
           "updatedAt": "2021-12-17T06:15:35Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Fixed with #518  and #525 ",
+          "createdAt": "2022-01-19T17:12:58Z",
+          "updatedAt": "2022-01-19T17:12:58Z"
         }
       ]
     },
@@ -5281,15 +5288,15 @@
       "id": "I_kwDOBoyH6c5Aj4q4",
       "title": "Require uniqueness of RatchetTreeExtensions in GroupInfo",
       "url": "https://github.com/mlswg/mls-protocol/issues/530",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "kkohbrok",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "A GroupInfo (or a PublicGroupState) should only ever contain one RatchetTreeExtension. Either that or it should be specified what happens if there is more than one.",
       "createdAt": "2021-12-17T11:09:22Z",
-      "updatedAt": "2022-01-10T06:59:49Z",
-      "closedAt": null,
+      "updatedAt": "2022-01-19T17:06:28Z",
+      "closedAt": "2022-01-19T17:06:28Z",
       "comments": [
         {
           "author": "bifurcation",
@@ -5328,15 +5335,15 @@
       "id": "I_kwDOBoyH6c5BSz6T",
       "title": "Improve padding description ",
       "url": "https://github.com/mlswg/mls-protocol/issues/534",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "tomleavy",
-      "authorAssociation": "NONE",
+      "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "In section 14.1 Message Encryption and Decryption there is a paragraph describing the reasons why you would want to use padding, and part of that mentions the following\r\n\r\nAs the padding mechanism is used to improve protection against traffic analysis, removal of the padding SHOULD be implemented in a \"constant-time\" manner at the MLS layer and above layers to prevent timing side-channels that would provide attackers with information on the size of the plaintext. The padding length length_of_padding can be chosen at the time of the message encryption by the sender.\r\n\r\nThis seems out of date given that padding is a separate field that doesn't need to be explicitly stripped off at decrypt time and there is no other mention of `length_of_padding` in the document.",
       "createdAt": "2022-01-06T15:53:58Z",
-      "updatedAt": "2022-01-10T16:36:10Z",
-      "closedAt": null,
+      "updatedAt": "2022-01-19T17:06:03Z",
+      "closedAt": "2022-01-19T17:06:03Z",
       "comments": [
         {
           "author": "bifurcation",
@@ -5347,7 +5354,7 @@
         },
         {
           "author": "tomleavy",
-          "authorAssociation": "NONE",
+          "authorAssociation": "CONTRIBUTOR",
           "body": "Sounds good, pushed PR https://github.com/mlswg/mls-protocol/pull/536",
           "createdAt": "2022-01-10T16:36:10Z",
           "updatedAt": "2022-01-10T16:36:10Z"
@@ -5361,14 +5368,22 @@
       "url": "https://github.com/mlswg/mls-protocol/issues/537",
       "state": "OPEN",
       "author": "tomleavy",
-      "authorAssociation": "NONE",
+      "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "The description of `RequiredCapabilities` is clear that proposals defined in the RFC are not to be included because they are considered standard, however there is no such clarification around extensions. \r\n\r\nIn general, extension requirements are not all that clear because in several places (such as Lifetime) it is mentioned that an extension must be included, however they are all listed as recommended rather than required in the table. It also raises a question in that if an extension is required to be implemented as part of the specification, and required in every KeyPackage, should it just be a field rather than an extension?",
       "createdAt": "2022-01-10T16:45:24Z",
-      "updatedAt": "2022-01-10T16:45:24Z",
+      "updatedAt": "2022-01-19T16:53:07Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "> The description of `RequiredCapabilities` is clear that proposals defined in the RFC are not to be included because they are considered standard, however there is no such clarification around extensions.\r\n\r\nEven that is not quite clear to me. At least to me it doesn't follow from Section 10.1.\r\n\r\n> In general, extension requirements are not all that clear because in several places (such as Lifetime) it is mentioned that an extension must be included, however they are all listed as recommended rather than required in the table. It also raises a question in that if an extension is required to be implemented as part of the specification, and required in every KeyPackage, should it just be a field rather than an extension?\r\n\r\nThe last one at least, I can shed some light on, as we had this discussion before and I was arguing the same thing. From what I remember, the argument was the keeping it an extension rather than a field would force implementers to implement the Extension mechanism. I don't have a super strong opinion here, but I seem to remember that that's what it boiled down to.\r\n\r\nI generally agree, though, that some things around RequiredCapabilities (RC) and Capabilities in general is unclear. I discussed this with @raphaelrobert and here are some examples/questions that came up:\r\n\r\n* If a group doesn't have an RC extension, can we assume that all extensions/proposals in the spec are supported by everyone, or do we have to check all KeyPackages?\r\n* Do we want all extensions/proposals in the spec to be MTI and thus implicitly supported by everyone? It might be useful to distinguish between basic (MTI) ones like Add, Remove, etc. and consider some optional such as ExternalInit or AppAck.\r\n* Relatedly, should the `Capabilities` extension in the KeyPackage list all the Spec proposals/extensions, too? Are they invalid if they do or if they don't? \r\n* We might want to discuss the difference between RC and a potential group policy. The way I understand it, RC is not meant to be an allow list or a block list, but instead should specify a minimum requirement for all clients in the group. A question here would be: If it's not in the RC, but everyone's capabilities support it, can I use/send it?",
+          "createdAt": "2022-01-19T16:53:06Z",
+          "updatedAt": "2022-01-19T16:53:06Z"
+        }
+      ]
     },
     {
       "number": 538,
@@ -5427,7 +5442,7 @@
       "labels": [],
       "body": "`KeyPackage`s currently have two usages in the spec:\r\n1. Pre-published key packages that you can download and put in a leaf when adding a new member\r\n2. leaf node content that you update when doing a full `Commit`\r\n\r\nCurrently, things have been designed to use only one structure for both uses, leading to some weirdness such as:\r\n- `version` and `cipher_suite` are useful in the usage 1, but are parameters of the group in usage 2.\r\n- `hpke_init_key` is a good name in usage 1, but would better be named `hpke_key` in usage 2.\r\n- some data is important in usage 2 and have no meaning in usage 1, hence they were designed as \"mandatory-when-updating extensions\" (such as `ParentHash`, and we were also discussing about adding the `group_id` in #527 to help prevent cross-group attacks)\r\n\r\nHow about using different structures for these?\r\n\r\n    // Essentially identical to KeyPackage\r\n    struct {\r\n        ProtocolVersion version;\r\n        CipherSuite cipher_suite;\r\n        HPKEPublicKey hpke_init_key;\r\n        opaque endpoint_id<0..255>;\r\n        Credential credential;\r\n        Extension extensions<8..2^32-1>;\r\n        opaque signature<0..2^16-1>;\r\n    } PrePublishedKeyPackage;\r\n    \r\n    struct {\r\n        HPKEPublicKey hpke_key;\r\n        opaque endpoint_id<0..255>;\r\n        Credential credential;\r\n        opaque parent_hash<0..255>;\r\n        opaque group_id<0..255>;\r\n        Extension extensions<8..2^32-1>;\r\n        opaque signature<0..2^16-1>;\r\n    } LeafNodeContent;\r\n    \r\n    enum {\r\n        reserved(0),\r\n        pre_published_key_package(1),\r\n        leaf_node_content(2),\r\n        (255)\r\n    } LeafNodeType;\r\n    \r\n    struct LeafNode {\r\n        // This is not included in the signature, but with the \"unambiguous signature\" PR that's not a problem\r\n        LeafNodeType type;\r\n        select(LeafNode.type) {\r\n            case pre_published_key_package:\r\n                PrePublishedKeyPackage data;\r\n            case leaf_node_content:\r\n                LeafNodeContent data;\r\n        }\r\n    }\r\n\r\nWhat would you think about refactoring `KeyPackage` like this?",
       "createdAt": "2022-01-12T12:34:44Z",
-      "updatedAt": "2022-01-13T13:40:34Z",
+      "updatedAt": "2022-01-19T17:37:45Z",
       "closedAt": null,
       "comments": [
         {
@@ -5439,14 +5454,14 @@
         },
         {
           "author": "tomleavy",
-          "authorAssociation": "NONE",
+          "authorAssociation": "CONTRIBUTOR",
           "body": "Ties into #537 as well because `ParentHash` is an example of an extension that is required and should be a field instead",
           "createdAt": "2022-01-12T15:41:00Z",
           "updatedAt": "2022-01-12T15:41:00Z"
         },
         {
           "author": "tomleavy",
-          "authorAssociation": "NONE",
+          "authorAssociation": "CONTRIBUTOR",
           "body": "@TWal one concern I have is how is that `signature` field in `LeafNodeContent` created? ",
           "createdAt": "2022-01-12T15:44:35Z",
           "updatedAt": "2022-01-12T15:44:35Z"
@@ -5460,7 +5475,7 @@
         },
         {
           "author": "tomleavy",
-          "authorAssociation": "NONE",
+          "authorAssociation": "CONTRIBUTOR",
           "body": "What about the scenario where Alice pulls down Bob's key package to add him to the group? In that case Alice can't do the conversion between formats on Bob's behalf. ",
           "createdAt": "2022-01-13T01:31:15Z",
           "updatedAt": "2022-01-13T01:31:36Z"
@@ -5474,10 +5489,17 @@
         },
         {
           "author": "tomleavy",
-          "authorAssociation": "NONE",
+          "authorAssociation": "CONTRIBUTOR",
           "body": "Ah somehow I missed that part in your original post. Makes sense",
           "createdAt": "2022-01-13T13:40:34Z",
           "updatedAt": "2022-01-13T13:40:34Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I like this general direction.  It solves a few things.\r\n\r\nInstead of having leaf nodes contain either a prepublished thing or a normal leaf node, how about having the prepublished thing wrap the leaf node thing?  As a bonus, we get separation between the key pair used for Welcome encryption and the key pair that goes in the leaf for TreeKEM.\r\n\r\n```\r\nstruct {\r\n    HPKEPublicKey hpke_key; // used for TreeKEM\r\n    opaque endpoint_id<0..255>;\r\n    Credential credential;\r\n    opaque parent_hash<0..255>; // empty when prepublished\r\n    Extension extensions<8..2^32-1>; // MUST have capabilities\r\n    opaque signature<0..2^16-1>;\r\n} LeafNodeContent;\r\n\r\n// Adds the things that aren't in the leaf node and wraps in another signature\r\nstruct {\r\n    ProtocolVersion version;\r\n    CipherSuite cipher_suite;\r\n    HPKEPublicKey init_key; // used for Welcome\r\n    LeafNodeContent leaf_node;\r\n    Extension extensions<8..2^32-1>; // MUST have lifetime\r\n    opaque signature<0..2^16-1>;\r\n} KeyPackage; // no need for \"PrePublished\"\r\n```\r\n\r\nThen when Alice adds Bob, she extracts his LeafNodeContent and sends that in the Add.  That doesn't let the other members of the group verify that Alice did the right thing w.r.t. expiry, but I'm not heartbroken about that.\r\n\r\nWe might also be able to remove the extensions field from the outer (KeyPackage) wrapping if we turn the `lifetime` extension into KeyPackage field.  I expect we probably need leaf extensions, but would be open to making `capabilities` into a field.",
+          "createdAt": "2022-01-19T17:37:45Z",
+          "updatedAt": "2022-01-19T17:37:45Z"
         }
       ]
     },
@@ -5493,9 +5515,48 @@
       "labels": [],
       "body": "The spec currently doesn't distinguish much between an external and a member commit w.r.t. how proposals by reference are handled. In theory, the server could keep track of proposals and send the external committer all proposals that were sent up until the time they want to commit externally. However, there are a few difficulties in committing proposals by reference in an external commit.\r\n\r\n* Membership tags: The external committer doesn't have the ability to verify membership tags on proposals. This is probably not a show-stopper, as proposals still need to be signed by a group member, but if nothing else, this should be noted in the spec.\r\n* Leaf positioning: The spec was changed such that the committer is added into the tree without an Add proposal being present. If there are other Add (and Remove) proposals present, it is unclear in what order they should be processed. Should the committer be added when the path is processed? Or should it still be processed as if it were an Add?\r\n\r\nThere are probably other things that can go wrong when committing referenced proposals externally, but those are the first that come to mind.\r\n\r\nThe simplest solution would be to simply ignore proposals by reference, although this would break the current principle that a commit must always include all valid proposals that were sent during the epoch. The consequence would be that Parties that sent proposals will have to re-send them if the epoch is ended by an external commit. It should be noted, that a Preconfigured sender will have no way to detect if their proposal was committed or not.",
       "createdAt": "2022-01-13T11:55:41Z",
-      "updatedAt": "2022-01-13T11:55:41Z",
+      "updatedAt": "2022-01-19T17:50:27Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I'm not sure your worries here are very real:\r\n\r\n* Membership tags: I don't think the membership tag issue matters, because the existing members will reject the proposal (and thus the commit) if the membership tag is invalid; at worst the joiner gets themselves wedged into a group by themselves.  And as you say, they're signed, and they keys can be tied back to the tree hash in the GroupInfo.\r\n* Leaf positioning: We need to clear this up regardless of proposals-by-reference.  It seems like basically having a synthetic Add at the beginning or end of the proposal list would work fine.\r\n* Preconfigured proposer: This is a problem only when Commits are encrypted, so it's not a problem in the external commit case (since an external Commit cannot be encrypted).\r\n\r\nNonetheless, the point that an external joiner can't fully verify a Proposal seems to argue pretty strongly for forbidding proposals by reference.  I don't think this even violates the semantic of \"include all valid proposals received in the epoch\", since (1) that requirement is receiver oriented (it's not enough for the proposals to have been sent) and (2) the external joiner can't tell if the proposals or valid.\r\n\r\nOverall, I would lean slightly toward removing proposals by reference.  And if we do that, it might even make sense to just define an ExternalCommit message that packages together the few things that are still allowed.",
+          "createdAt": "2022-01-19T17:50:27Z",
+          "updatedAt": "2022-01-19T17:50:27Z"
+        }
+      ]
+    },
+    {
+      "number": 542,
+      "id": "I_kwDOBoyH6c5B_UHj",
+      "title": "Conflicting proposal / commit behavior",
+      "url": "https://github.com/mlswg/mls-protocol/issues/542",
+      "state": "OPEN",
+      "author": "tomleavy",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "There are several rules in terms of selecting proposals and issuing commits against them. I have distilled the existing wording in the document into the following rules\r\n\r\n1. If there are multiple updates for the same leaf, cherry pick one.\r\n2. If there is a remove and an update/add for the same key package, always choose remove\r\n3. If there are multiple group context extension updates, cherry pick one\r\n4. The sender of a commit MUST use all valid proposals it has received \r\n5. In the event that a valid proposal is omitted from the next Commit, the sender of the proposal SHOULD retransmit it in the new epoch\r\n\r\nIt seems that rule 4 and rule 5 conflict with each other in that one is suggesting that all proposals must be consumed or there should be a hard error, and the other assumes it is possible for a commit to purposefully leave out a proposal and it can optionally be retransmitted.\r\n\r\nI have been trying to write code that reasonably handles the cherry picking logic around multiple proposals referencing the same key package or multiple changes to group context while also enforcing the \"must use all valid proposals received\" rule, and it does introduce some complexity that maybe would be avoided by just eliminating that rule?\r\n",
+      "createdAt": "2022-01-18T16:30:42Z",
+      "updatedAt": "2022-01-19T19:49:16Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Good point. One situation where rule 5 would make sense is if we prohibit proposals by reference in external commits to solve the problems outlined in #540. Rule 5 would otherwise make sense in situations, where there's no agreement on whether a proposal is valid. One case where this is necessarily the case is the following: A remove proposal was sent, but the client that is to be removed is the committer in this epoch. The client can't commit their own removal, but the proposal is still technically valid from the proposer's point of view. \r\n\r\nThere might be other situations, for example, where the application imposes some sort of policy that different clients interpret differently. This should be the application's problem, though.",
+          "createdAt": "2022-01-19T07:46:14Z",
+          "updatedAt": "2022-01-19T07:46:14Z"
+        },
+        {
+          "author": "tomleavy",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I think what I'm trying to boil this down to is, should my implementation throw an error if all proposals are not consumed by the process of applying the commit I just received, I'm still thinking enforcing that would be too difficult to apply everywhere",
+          "createdAt": "2022-01-19T19:49:16Z",
+          "updatedAt": "2022-01-19T19:49:16Z"
+        }
+      ]
     }
   ],
   "pulls": [
@@ -39336,7 +39397,7 @@
       "labels": [],
       "body": "This PR reflects further discussion on #502 and replaces #518.  The high-level impacts are:\r\n\r\n* Add clearer, more prescriptive definitions of the re-init and branch operations\r\n* Use a single syntax for all resumption PSKs, but also have a `usage` parameter to distinguish cases\r\n* Allow an `application` usage to cover any other cases defined by applications\r\n\r\nOnce #520 lands, we should also add some text to the protocol overview to describe these operations.  Pasting some text here for usage in that future PR...\r\n\r\n```\r\n## Relationships Between Epochs\r\n\r\nA group comprises a single linear sequence of epochs. However, it can sometimes\r\nbe useful to express relationships between epochs, either within a group or\r\nacross groups.  MLS derives a resumption pre-shared key (PSK) from each epoch to\r\nallow a entropy extracted from one epoch to be injected into a future epoch,\r\neffectively creating a causal link between the two epochs.\r\n\r\nMLS supports two ways to tie a new group to an existing group. Re-initialization\r\ncloses one group and creates a new group comprising the same members with\r\ndifferent parameters. Branching starts a new group with a subset of the original\r\ngroup's participants (with no effect on the original group).  In both cases,\r\nthe new group is linked to the old group via a resumption PSK.\r\n\r\n~~~~~\r\nepoch_A_[n-1]\r\n     |\r\n     |\r\n     |<-- ReInit\r\n     |\r\n     V\r\nepoch_A_[n]           epoch_B_[0]\r\n     .                     |\r\n     .  PSK(usage=reinit)  |\r\n     .....................>|\r\n                           |\r\n                           V\r\n                      epoch_B_[1]\r\n~~~~~\r\n{: title=\"Reinitializing a group\" }\r\n\r\n\r\n~~~~~\r\nepoch_A_[n-1]\r\n     |\r\n     |\r\n     |<-- ReInit\r\n     |\r\n     V\r\nepoch_A_[n]           epoch_B_[0]\r\n     |                     |\r\n     |  PSK(usage=branch)  |\r\n     |....................>|\r\n     |                     |\r\n     V                     V\r\nepoch_A_[n+1]         epoch_B_[1]\r\n~~~~~\r\n{: title=\"Branching a group\" }\r\n\r\nApplications may also choose to use resumption PSKs to link epochs in other\r\nways.  For example, the following figure shows a case where a resumption PSK\r\nfrom epoch `n` is injected into epoch `n+k`.  This demonstrates that the members\r\nof the group at epoch `n+k` were also members at epoch `n` (irrespective of any\r\nchanges to these members' keys due to Updates or Commits.\r\n\r\n~~~~~\r\nepoch_A_[n-1]\r\n     |\r\n     |\r\n     |<-- ReInit\r\n     |\r\n     V\r\nepoch_A_[n]\r\n     |                     \r\n     |  PSK(usage=application)  \r\n     |.....................\r\n     |                    . \r\n     |                    . \r\n    ...                  ...\r\n     |                    . \r\n     |                    . \r\n     V                    .\r\nepoch_A_[n+k-1]           .\r\n     |                    . \r\n     |                    . \r\n     |<.................... \r\n     |                      \r\n     V                     \r\nepoch_A_[n+k]       \r\n~~~~~\r\n{: title=\"Reinjecting entropy from an earlier epoch\" }\r\n```",
       "createdAt": "2021-12-15T15:45:11Z",
-      "updatedAt": "2021-12-17T06:16:33Z",
+      "updatedAt": "2022-01-19T19:05:21Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "2de18dce6939cf7cbb619d5824e2560c6e5efd57",
@@ -39415,6 +39476,26 @@
               "body": "I wonder if we can be a bit more firm on the fact that the Welcome message should be provided at the same time as the Commit. Because if not, there's an attack vector where malicious members can shut down a group without an obvious way to recover from it.",
               "createdAt": "2021-12-16T17:57:54Z",
               "updatedAt": "2021-12-16T18:01:16Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOBoyH6c4zGE1V",
+          "commit": {
+            "abbreviatedOid": "5b9590b"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-01-19T19:05:20Z",
+          "updatedAt": "2022-01-19T19:05:21Z",
+          "comments": [
+            {
+              "originalPosition": 143,
+              "body": "I might go the other way, allowing any member of the group to send the Welcome.  That way as long as anyone is behaving properly, they can revive the closed group.  Up to the application to decide who does it.",
+              "createdAt": "2022-01-19T19:05:20Z",
+              "updatedAt": "2022-01-19T19:05:21Z"
             }
           ]
         }
@@ -39642,24 +39723,26 @@
       "id": "PR_kwDOBoyH6c4v_0jh",
       "title": "Refactor Group Joining and fix External Inits",
       "url": "https://github.com/mlswg/mls-protocol/pull/529",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "kkohbrok",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "This PR refactors the two sections on Group Joining (via Welcome and via External Init) by changing the `GroupInfo` struct that can be used for both cases. The `external_pub` used in the course of an External Init is added as an optional field. This PR also:\r\n\r\n- removes the redundant ProtocolVersion in the GroupInfo\r\n- adds a GroupInfoTBS struct to follow the convention of specifying a TBS struct for signed messages\r\n- implicitly, the `confirmed_transcript_hash` and `confirmation_tag` is now used for external inits instead of the `interim_transcript_hash`, which was not sufficient to create a valid commit",
       "createdAt": "2021-12-17T10:53:40Z",
-      "updatedAt": "2022-01-11T07:23:50Z",
+      "updatedAt": "2022-01-19T17:09:12Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "6754a8edc9d77c902643d37a519b9a546ab00b4e",
       "headRepository": "kkohbrok/mls-protocol",
       "headRefName": "refactor_pgs_and_welcome",
       "headRefOid": "5b507f4df091107bde42b619791376ff2335efbb",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-01-19T17:09:12Z",
+      "mergedAt": "2022-01-19T17:09:12Z",
+      "mergedBy": "bifurcation",
+      "mergeCommit": {
+        "oid": "f02d296844fef310d417485100ae0a2e32feb9c7"
+      },
       "comments": [
         {
           "author": "kkohbrok",
@@ -39742,6 +39825,19 @@
               "updatedAt": "2022-01-11T07:23:15Z"
             }
           ]
+        },
+        {
+          "id": "PRR_kwDOBoyH6c4zFlv_",
+          "commit": {
+            "abbreviatedOid": "5b507f4"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-01-19T17:09:05Z",
+          "updatedAt": "2022-01-19T17:09:05Z",
+          "comments": []
         }
       ]
     },
@@ -39854,24 +39950,26 @@
       "id": "PR_kwDOBoyH6c4wtxNQ",
       "title": "Require extensions to be unique in any given extensions vector",
       "url": "https://github.com/mlswg/mls-protocol/pull/535",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "kkohbrok",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "Fixes #530.",
       "createdAt": "2022-01-10T07:15:21Z",
-      "updatedAt": "2022-01-14T14:46:50Z",
+      "updatedAt": "2022-01-19T17:06:29Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "e39695c6e8fe39e04fe644a213eb8a82ac483e3b",
       "headRepository": "kkohbrok/mls-protocol",
       "headRefName": "extension_uniqueness",
       "headRefOid": "be98d1da1f2138de63bf026cc8ba6bf5650677ca",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-01-19T17:06:28Z",
+      "mergedAt": "2022-01-19T17:06:28Z",
+      "mergedBy": "bifurcation",
+      "mergeCommit": {
+        "oid": "6b712c4d50c3a6bcec178fd714e491634e119a8b"
+      },
       "comments": [],
       "reviews": [
         {
@@ -39914,24 +40012,26 @@
       "id": "PR_kwDOBoyH6c4wvqZX",
       "title": "Reword padding section to reflect updated padding structure",
       "url": "https://github.com/mlswg/mls-protocol/pull/536",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "tomleavy",
-      "authorAssociation": "NONE",
+      "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "The padding section was out of date based on prior changes. Resolves #534 ",
       "createdAt": "2022-01-10T16:34:53Z",
-      "updatedAt": "2022-01-11T11:39:41Z",
+      "updatedAt": "2022-01-19T17:06:03Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "e39695c6e8fe39e04fe644a213eb8a82ac483e3b",
       "headRepository": "tomleavy/mls-protocol",
       "headRefName": "padding-update",
       "headRefOid": "9555eb99b3f21b9b38e6fe849bc43dbd9139d668",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-01-19T17:06:03Z",
+      "mergedAt": "2022-01-19T17:06:02Z",
+      "mergedBy": "bifurcation",
+      "mergeCommit": {
+        "oid": "da39458fc145efd489a44015bbc81f6b88bd9691"
+      },
       "comments": [],
       "reviews": [
         {
@@ -39945,6 +40045,19 @@
           "body": "",
           "createdAt": "2022-01-11T11:39:41Z",
           "updatedAt": "2022-01-11T11:39:41Z",
+          "comments": []
+        },
+        {
+          "id": "PRR_kwDOBoyH6c4zFkzL",
+          "commit": {
+            "abbreviatedOid": "9555eb9"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-01-19T17:05:58Z",
+          "updatedAt": "2022-01-19T17:05:58Z",
           "comments": []
         }
       ]
@@ -39961,13 +40074,112 @@
       "labels": [],
       "body": "",
       "createdAt": "2022-01-14T20:04:17Z",
-      "updatedAt": "2022-01-14T20:04:17Z",
+      "updatedAt": "2022-01-19T18:56:34Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "e39695c6e8fe39e04fe644a213eb8a82ac483e3b",
       "headRepository": "mlswg/mls-protocol",
       "headRefName": "brendan/editorial",
       "headRefOid": "91c5587b2d86b06cab40a03e2c73f460ffd1c25a",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOBoyH6c4zGCMm",
+          "commit": {
+            "abbreviatedOid": "91c5587"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "Overall lgtm, one small comment.",
+          "createdAt": "2022-01-19T18:55:05Z",
+          "updatedAt": "2022-01-19T18:56:34Z",
+          "comments": [
+            {
+              "originalPosition": 247,
+              "body": "```suggestion\r\n* The `group_id` field is constant.\r\n* The `extensions` field is updated whenever a GroupContextExtensions proposal is committed.\r\n```\r\n\r\n(And the `extensions` part should go lower down.)",
+              "createdAt": "2022-01-19T18:55:06Z",
+              "updatedAt": "2022-01-19T18:56:34Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 543,
+      "id": "PR_kwDOBoyH6c4xRvfM",
+      "title": "Be consistent about version labeling",
+      "url": "https://github.com/mlswg/mls-protocol/pull/543",
+      "state": "OPEN",
+      "author": "bifurcation",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Fixes #531 ",
+      "createdAt": "2022-01-19T17:21:12Z",
+      "updatedAt": "2022-01-19T17:21:12Z",
+      "baseRepository": "mlswg/mls-protocol",
+      "baseRefName": "main",
+      "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
+      "headRepository": "mlswg/mls-protocol",
+      "headRefName": "consistent-version",
+      "headRefOid": "2d35e51863aa0bce18f834b6a5d97b4f7650825f",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 544,
+      "id": "PR_kwDOBoyH6c4xR9-v",
+      "title": "Remove version from ciphersuites",
+      "url": "https://github.com/mlswg/mls-protocol/pull/544",
+      "state": "OPEN",
+      "author": "bifurcation",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "#532 proposes to remove redundancy between version fields and ciphersuites by removing the version fields.  This PR removes the version from the ciphersuite instead.",
+      "createdAt": "2022-01-19T18:38:38Z",
+      "updatedAt": "2022-01-19T18:38:38Z",
+      "baseRepository": "mlswg/mls-protocol",
+      "baseRefName": "main",
+      "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
+      "headRepository": "mlswg/mls-protocol",
+      "headRefName": "remove-ciphersuite-version",
+      "headRefOid": "501433e48cd3e154f357d4ff760f260e9733a540",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 545,
+      "id": "PR_kwDOBoyH6c4xSKP5",
+      "title": "Add missing word",
+      "url": "https://github.com/mlswg/mls-protocol/pull/545",
+      "state": "OPEN",
+      "author": "stefunctional",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2022-01-19T19:48:09Z",
+      "updatedAt": "2022-01-19T19:48:09Z",
+      "baseRepository": "mlswg/mls-protocol",
+      "baseRefName": "main",
+      "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
+      "headRepository": "stefunctional/mls-protocol",
+      "headRefName": "missing-word",
+      "headRefOid": "c75594d534594568949d1cf6a7deeb26c2524982",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
