@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-01-20T01:16:11.030241+00:00",
+  "timestamp": "2022-01-23T01:04:35.759526+00:00",
   "repo": "mlswg/mls-protocol",
   "labels": [
     {
@@ -5373,7 +5373,7 @@
       "labels": [],
       "body": "The description of `RequiredCapabilities` is clear that proposals defined in the RFC are not to be included because they are considered standard, however there is no such clarification around extensions. \r\n\r\nIn general, extension requirements are not all that clear because in several places (such as Lifetime) it is mentioned that an extension must be included, however they are all listed as recommended rather than required in the table. It also raises a question in that if an extension is required to be implemented as part of the specification, and required in every KeyPackage, should it just be a field rather than an extension?",
       "createdAt": "2022-01-10T16:45:24Z",
-      "updatedAt": "2022-01-19T16:53:07Z",
+      "updatedAt": "2022-01-20T13:56:52Z",
       "closedAt": null,
       "comments": [
         {
@@ -5382,6 +5382,20 @@
           "body": "> The description of `RequiredCapabilities` is clear that proposals defined in the RFC are not to be included because they are considered standard, however there is no such clarification around extensions.\r\n\r\nEven that is not quite clear to me. At least to me it doesn't follow from Section 10.1.\r\n\r\n> In general, extension requirements are not all that clear because in several places (such as Lifetime) it is mentioned that an extension must be included, however they are all listed as recommended rather than required in the table. It also raises a question in that if an extension is required to be implemented as part of the specification, and required in every KeyPackage, should it just be a field rather than an extension?\r\n\r\nThe last one at least, I can shed some light on, as we had this discussion before and I was arguing the same thing. From what I remember, the argument was the keeping it an extension rather than a field would force implementers to implement the Extension mechanism. I don't have a super strong opinion here, but I seem to remember that that's what it boiled down to.\r\n\r\nI generally agree, though, that some things around RequiredCapabilities (RC) and Capabilities in general is unclear. I discussed this with @raphaelrobert and here are some examples/questions that came up:\r\n\r\n* If a group doesn't have an RC extension, can we assume that all extensions/proposals in the spec are supported by everyone, or do we have to check all KeyPackages?\r\n* Do we want all extensions/proposals in the spec to be MTI and thus implicitly supported by everyone? It might be useful to distinguish between basic (MTI) ones like Add, Remove, etc. and consider some optional such as ExternalInit or AppAck.\r\n* Relatedly, should the `Capabilities` extension in the KeyPackage list all the Spec proposals/extensions, too? Are they invalid if they do or if they don't? \r\n* We might want to discuss the difference between RC and a potential group policy. The way I understand it, RC is not meant to be an allow list or a block list, but instead should specify a minimum requirement for all clients in the group. A question here would be: If it's not in the RC, but everyone's capabilities support it, can I use/send it?",
           "createdAt": "2022-01-19T16:53:06Z",
           "updatedAt": "2022-01-19T16:53:06Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Reacting to Konrad's points here:\r\n\r\n* It seems like to to be sure, you always need to check.  RC just helps ensure that the check will produce the right answer.\r\n* I would propose the answer to this be \"Yes, the proposals/extensions in the spec are MTI\"\r\n* If the answer to the prior question is as I propose, then you don't need to list spec proposals/extensions in Capabilities\r\n* The difference between RC and checking everyone supports it is whether we expect it to be supported in the future.  For Proposals, that might not matter; for GroupContext extensions, it matters more.\r\n\r\nIt also seems like there's a fair argument that RequiredCapabilities should just be removed from the spec and replaced by some application-layer coordinated policy.  I would be OK with that.\r\n\r\nTo @tomleavy's point about mandatory extensions -- I would probably be OK with converting mandatory extensions to fields, especially with the better division of labor proposed in #539.  ",
+          "createdAt": "2022-01-20T13:27:52Z",
+          "updatedAt": "2022-01-20T13:27:52Z"
+        },
+        {
+          "author": "tomleavy",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I kind of like the idea of RequiredCapabilities because it enforces the proper checks lower down. Application layer would need to proxy packets via a middleware type of layer which could potentially be messy. \n\n",
+          "createdAt": "2022-01-20T13:56:52Z",
+          "updatedAt": "2022-01-20T13:56:52Z"
         }
       ]
     },
@@ -5442,7 +5456,7 @@
       "labels": [],
       "body": "`KeyPackage`s currently have two usages in the spec:\r\n1. Pre-published key packages that you can download and put in a leaf when adding a new member\r\n2. leaf node content that you update when doing a full `Commit`\r\n\r\nCurrently, things have been designed to use only one structure for both uses, leading to some weirdness such as:\r\n- `version` and `cipher_suite` are useful in the usage 1, but are parameters of the group in usage 2.\r\n- `hpke_init_key` is a good name in usage 1, but would better be named `hpke_key` in usage 2.\r\n- some data is important in usage 2 and have no meaning in usage 1, hence they were designed as \"mandatory-when-updating extensions\" (such as `ParentHash`, and we were also discussing about adding the `group_id` in #527 to help prevent cross-group attacks)\r\n\r\nHow about using different structures for these?\r\n\r\n    // Essentially identical to KeyPackage\r\n    struct {\r\n        ProtocolVersion version;\r\n        CipherSuite cipher_suite;\r\n        HPKEPublicKey hpke_init_key;\r\n        opaque endpoint_id<0..255>;\r\n        Credential credential;\r\n        Extension extensions<8..2^32-1>;\r\n        opaque signature<0..2^16-1>;\r\n    } PrePublishedKeyPackage;\r\n    \r\n    struct {\r\n        HPKEPublicKey hpke_key;\r\n        opaque endpoint_id<0..255>;\r\n        Credential credential;\r\n        opaque parent_hash<0..255>;\r\n        opaque group_id<0..255>;\r\n        Extension extensions<8..2^32-1>;\r\n        opaque signature<0..2^16-1>;\r\n    } LeafNodeContent;\r\n    \r\n    enum {\r\n        reserved(0),\r\n        pre_published_key_package(1),\r\n        leaf_node_content(2),\r\n        (255)\r\n    } LeafNodeType;\r\n    \r\n    struct LeafNode {\r\n        // This is not included in the signature, but with the \"unambiguous signature\" PR that's not a problem\r\n        LeafNodeType type;\r\n        select(LeafNode.type) {\r\n            case pre_published_key_package:\r\n                PrePublishedKeyPackage data;\r\n            case leaf_node_content:\r\n                LeafNodeContent data;\r\n        }\r\n    }\r\n\r\nWhat would you think about refactoring `KeyPackage` like this?",
       "createdAt": "2022-01-12T12:34:44Z",
-      "updatedAt": "2022-01-19T17:37:45Z",
+      "updatedAt": "2022-01-20T13:42:07Z",
       "closedAt": null,
       "comments": [
         {
@@ -5500,6 +5514,34 @@
           "body": "I like this general direction.  It solves a few things.\r\n\r\nInstead of having leaf nodes contain either a prepublished thing or a normal leaf node, how about having the prepublished thing wrap the leaf node thing?  As a bonus, we get separation between the key pair used for Welcome encryption and the key pair that goes in the leaf for TreeKEM.\r\n\r\n```\r\nstruct {\r\n    HPKEPublicKey hpke_key; // used for TreeKEM\r\n    opaque endpoint_id<0..255>;\r\n    Credential credential;\r\n    opaque parent_hash<0..255>; // empty when prepublished\r\n    Extension extensions<8..2^32-1>; // MUST have capabilities\r\n    opaque signature<0..2^16-1>;\r\n} LeafNodeContent;\r\n\r\n// Adds the things that aren't in the leaf node and wraps in another signature\r\nstruct {\r\n    ProtocolVersion version;\r\n    CipherSuite cipher_suite;\r\n    HPKEPublicKey init_key; // used for Welcome\r\n    LeafNodeContent leaf_node;\r\n    Extension extensions<8..2^32-1>; // MUST have lifetime\r\n    opaque signature<0..2^16-1>;\r\n} KeyPackage; // no need for \"PrePublished\"\r\n```\r\n\r\nThen when Alice adds Bob, she extracts his LeafNodeContent and sends that in the Add.  That doesn't let the other members of the group verify that Alice did the right thing w.r.t. expiry, but I'm not heartbroken about that.\r\n\r\nWe might also be able to remove the extensions field from the outer (KeyPackage) wrapping if we turn the `lifetime` extension into KeyPackage field.  I expect we probably need leaf extensions, but would be open to making `capabilities` into a field.",
           "createdAt": "2022-01-19T17:37:45Z",
           "updatedAt": "2022-01-19T17:37:45Z"
+        },
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Why not keep sending the KeyPackage in the Add? That wouldn't cost much and would allow everyone to validate the lifetime. Note, that the lifetime is crucial in achieving PCS for pre-published key material. If I compromise Bob and get hold of the private key material of a bunch of his KeyPackages, I can add \"Bob\" to any group I want as long as the Credential inside the LeafNodeContent remains valid and Bob doesn't revoke the LeafNodeContent somehow.\r\n\r\nAlso, we'll have to do this if we want to enable any member to send the Welcome message as you proposed here: https://github.com/mlswg/mls-protocol/pull/525#discussion_r788056226.",
+          "createdAt": "2022-01-20T08:09:10Z",
+          "updatedAt": "2022-01-20T08:09:10Z"
+        },
+        {
+          "author": "TWal",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I agree that including `LeafNodeContent` inside `KeyPackage` is quite clean, but something is bothering me with this approach: I'd like that the `group_id` is signed by the participant occupying that leaf, to protect against cross-group attacks.\r\n\r\nIn the first message of this issue I did this by including `group_id` in `LeafNodeContent`, but in fact we don't need to store it in the leaf, we just need to include it in the `LeafNodeContentTBS`.\r\n\r\nIn any case, if we want to include `group_id` in the signature, we need a way to differentiate between leaves that triggered a commit and the ones that are \"fresh\". And for that I think using a tagged-union struct is the cleanest way to do it.\r\n",
+          "createdAt": "2022-01-20T12:53:24Z",
+          "updatedAt": "2022-01-20T12:53:24Z"
+        },
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "It always feels a bit lazy to use an extension (and implementations have to be careful to check for their presence), but we could use a `GroupId` extension in the same way that we use a `ParentHash` extension. You will find both of them only on LeafContents that were updated at least once.\r\n\r\nAnother result of including GroupId in the KeyPackage is that the signature will explicitly sign the `GroupId` and I'm not sure if that doesn't completely destroy any deniability guarantees we can still get from MLS.",
+          "createdAt": "2022-01-20T13:09:17Z",
+          "updatedAt": "2022-01-20T13:09:17Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I don't think there's really a good way to get the `group_id` into the leaf.  Because of prepublication, it would have to be optional, but in order to prevent attacks, you need rules to decide whether it's required in a given situation.  It seems like the best you can do is basically TOFU:\r\n\r\n* When you first get the tree, you can't validate whether the group_id should be in a given leaf or not\r\n* Once you're a member, you require that group_id is sent in Update and UpdatePath.leaf_key_package\r\n\r\nI could live with a solution of that character, but given it's a bit complex, might prefer to leave it out unless we get a useful property from it.\r\n\r\n@kkohbrok - Re: Sending KeyPackage in Add - Yep, that makes sense.  So you would send KeyPackage in Add, and LeafNode in Update.",
+          "createdAt": "2022-01-20T13:42:07Z",
+          "updatedAt": "2022-01-20T13:42:07Z"
         }
       ]
     },
@@ -5515,7 +5557,7 @@
       "labels": [],
       "body": "The spec currently doesn't distinguish much between an external and a member commit w.r.t. how proposals by reference are handled. In theory, the server could keep track of proposals and send the external committer all proposals that were sent up until the time they want to commit externally. However, there are a few difficulties in committing proposals by reference in an external commit.\r\n\r\n* Membership tags: The external committer doesn't have the ability to verify membership tags on proposals. This is probably not a show-stopper, as proposals still need to be signed by a group member, but if nothing else, this should be noted in the spec.\r\n* Leaf positioning: The spec was changed such that the committer is added into the tree without an Add proposal being present. If there are other Add (and Remove) proposals present, it is unclear in what order they should be processed. Should the committer be added when the path is processed? Or should it still be processed as if it were an Add?\r\n\r\nThere are probably other things that can go wrong when committing referenced proposals externally, but those are the first that come to mind.\r\n\r\nThe simplest solution would be to simply ignore proposals by reference, although this would break the current principle that a commit must always include all valid proposals that were sent during the epoch. The consequence would be that Parties that sent proposals will have to re-send them if the epoch is ended by an external commit. It should be noted, that a Preconfigured sender will have no way to detect if their proposal was committed or not.",
       "createdAt": "2022-01-13T11:55:41Z",
-      "updatedAt": "2022-01-19T17:50:27Z",
+      "updatedAt": "2022-01-20T07:57:36Z",
       "closedAt": null,
       "comments": [
         {
@@ -5524,6 +5566,13 @@
           "body": "I'm not sure your worries here are very real:\r\n\r\n* Membership tags: I don't think the membership tag issue matters, because the existing members will reject the proposal (and thus the commit) if the membership tag is invalid; at worst the joiner gets themselves wedged into a group by themselves.  And as you say, they're signed, and they keys can be tied back to the tree hash in the GroupInfo.\r\n* Leaf positioning: We need to clear this up regardless of proposals-by-reference.  It seems like basically having a synthetic Add at the beginning or end of the proposal list would work fine.\r\n* Preconfigured proposer: This is a problem only when Commits are encrypted, so it's not a problem in the external commit case (since an external Commit cannot be encrypted).\r\n\r\nNonetheless, the point that an external joiner can't fully verify a Proposal seems to argue pretty strongly for forbidding proposals by reference.  I don't think this even violates the semantic of \"include all valid proposals received in the epoch\", since (1) that requirement is receiver oriented (it's not enough for the proposals to have been sent) and (2) the external joiner can't tell if the proposals or valid.\r\n\r\nOverall, I would lean slightly toward removing proposals by reference.  And if we do that, it might even make sense to just define an ExternalCommit message that packages together the few things that are still allowed.",
           "createdAt": "2022-01-19T17:50:27Z",
           "updatedAt": "2022-01-19T17:50:27Z"
+        },
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I'm not sure I understand how the receiver-orientation of the \"all valid proposals must be included\" rule matters to its application to this case. If we remove the requirement for external commits to include proposals by reference and don't soften that rule to exclude external commits, receivers will consider all external commits invalid in the presence of valid pending proposals by reference.\r\n\r\nIn any case, I'm also in favor of keeping it simple and restrict the External Commit to a few, well defined components that do not include any proposals by reference.",
+          "createdAt": "2022-01-20T07:57:36Z",
+          "updatedAt": "2022-01-20T07:57:36Z"
         }
       ]
     },
@@ -5539,7 +5588,7 @@
       "labels": [],
       "body": "There are several rules in terms of selecting proposals and issuing commits against them. I have distilled the existing wording in the document into the following rules\r\n\r\n1. If there are multiple updates for the same leaf, cherry pick one.\r\n2. If there is a remove and an update/add for the same key package, always choose remove\r\n3. If there are multiple group context extension updates, cherry pick one\r\n4. The sender of a commit MUST use all valid proposals it has received \r\n5. In the event that a valid proposal is omitted from the next Commit, the sender of the proposal SHOULD retransmit it in the new epoch\r\n\r\nIt seems that rule 4 and rule 5 conflict with each other in that one is suggesting that all proposals must be consumed or there should be a hard error, and the other assumes it is possible for a commit to purposefully leave out a proposal and it can optionally be retransmitted.\r\n\r\nI have been trying to write code that reasonably handles the cherry picking logic around multiple proposals referencing the same key package or multiple changes to group context while also enforcing the \"must use all valid proposals received\" rule, and it does introduce some complexity that maybe would be avoided by just eliminating that rule?\r\n",
       "createdAt": "2022-01-18T16:30:42Z",
-      "updatedAt": "2022-01-19T19:49:16Z",
+      "updatedAt": "2022-01-20T13:50:57Z",
       "closedAt": null,
       "comments": [
         {
@@ -5552,9 +5601,23 @@
         {
           "author": "tomleavy",
           "authorAssociation": "CONTRIBUTOR",
-          "body": "I think what I'm trying to boil this down to is, should my implementation throw an error if all proposals are not consumed by the process of applying the commit I just received, I'm still thinking enforcing that would be too difficult to apply everywhere",
+          "body": "I think what I'm trying to boil this down to is, should my implementation throw an error if all proposals are not consumed by the process of applying the commit I just received? I'm still thinking enforcing that would be too difficult to apply everywhere. ",
           "createdAt": "2022-01-19T19:49:16Z",
-          "updatedAt": "2022-01-19T19:49:16Z"
+          "updatedAt": "2022-01-20T03:02:09Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@tomleavy I don't think you can be that strict, just because of the sender/receiver asymmetry.  Just because you received a Proposal doesn't mean that the committer did.  I would view the rules in the doc as local guidance for the committer in constructing a Commit.  Given that they don't reflect externally-visible behavior, they should probably be downgraded to SHOULD.",
+          "createdAt": "2022-01-20T13:11:05Z",
+          "updatedAt": "2022-01-20T13:11:05Z"
+        },
+        {
+          "author": "tomleavy",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@bifurcation that makes sense to me, I'll put up a PR to change to SHOULD",
+          "createdAt": "2022-01-20T13:50:57Z",
+          "updatedAt": "2022-01-20T13:50:57Z"
         }
       ]
     }
@@ -37791,7 +37854,7 @@
       "labels": [],
       "body": "The specification currently assumes that a Credential provides a singular identity for a client, when in reality that is not the case.  For example, X509Credential can provide a whole collection of identities, and it's up to the application to decide if its preferred identity is among them.  Just like in TLS, a server can send a cert with 100 domains, but the TLS client knows which one it's looking for.\r\n\r\nThis PR refactors the parts of the spec that refer to identity to be consistent with this idea.  The main impacts are to processing of Update and Remove-within-External-Commit, both cases in which you want the new KeyPackage to logically represent the same identity as the old one.\r\n\r\nThis PR also removes the `endpoint_id` field from KeyPackage.  Since we now reference KeyPackages by KeyPackageID, there's no longer a need for a separate identifier.  (Unless we want an identifier that's stable across epochs, but (a) it's not clear to me that that is needed in general and (b) it can easily be added in an extension, as in fact we have done in Webex.)",
       "createdAt": "2021-11-16T22:20:20Z",
-      "updatedAt": "2021-12-17T06:43:15Z",
+      "updatedAt": "2022-01-20T13:07:03Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "2de18dce6939cf7cbb619d5824e2560c6e5efd57",
@@ -37907,9 +37970,57 @@
           "body": "The issue of credentials not being unique or constant is at the heart of this. Other items here are not authenticated or are reliant on those credentials and therefore the consistency of e.g. the leaf index does not actually imply consistency of identity. \r\n\r\nIf credentials were not unique/constant in the sense that a prior one signs off on the next one, then we would inherit consistency from that (which is different from the case here). Similarly, if a single root identity (\"identity\") were to forward to other sub-identities, then there is consistency in the meaning of identity. \r\n\r\nWhat we have here is a backdoor on switching out identities which would be allowed by the spec - yes, they are subcomponents of a credential, but any sender is not actually assured of which identity they are conversing with. For example, Alice may trust a domain name / email address from Bob, but when that switches part-way through the conversation, there is no opt-out point or notification to Alice. There is considerable drift available to Bob (either unintentionally or maliciously) that could occur without knowledge from other group members. This is noticeably different from the case that Bob simply maliciously forwards messages externally, as the drift occurs internally to the group.",
           "createdAt": "2021-12-17T06:43:15Z",
           "updatedAt": "2021-12-17T06:43:15Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "You might think the simplest thing we could do here is just require that a Credential be stable for the lifetime of a member's presence in the group.  If you want to change the Credential, you have to be removed and re-added.  But (a) that seems like throwing out a bunch of useful functionality, and (b) it doesn't actually remove the risk, just moves it over to the remove/re-add case, making it harder for the application to track continuity.",
+          "createdAt": "2022-01-20T13:07:02Z",
+          "updatedAt": "2022-01-20T13:07:02Z"
         }
       ],
-      "reviews": []
+      "reviews": [
+        {
+          "id": "PRR_kwDOBoyH6c4zJMs2",
+          "commit": {
+            "abbreviatedOid": "ee54cbd"
+          },
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-01-20T10:27:13Z",
+          "updatedAt": "2022-01-20T10:27:13Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "In other words, this gives us a new requirement for the AS, namely that it has to be able to tell us if a given credential is the valid successor of another credential. With fixed identities, this would not be necessary. Of course one way of implementing this check for the AS is to check if some notion of identity that arises from a given credential type is indeed the same for both certificates.",
+              "createdAt": "2022-01-20T10:27:13Z",
+              "updatedAt": "2022-01-20T10:27:13Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOBoyH6c4zJ1Xx",
+          "commit": {
+            "abbreviatedOid": "ee54cbd"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2022-01-20T13:04:35Z",
+          "updatedAt": "2022-01-20T13:04:35Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "I wouldn't frame this as an AS requirement, but regardless, you have to do *something* here: The application has to either (1) verify that the \"identity\" is the same (for some definition thereof), or (2) verify that the identity is acceptable. \r\n\r\n(2) is the state of the art basically everywhere right now.  See, e.g., [RFC 6125](https://datatracker.ietf.org/doc/html/rfc6125).  Doing (1) for an X.509 certificate is actually pretty complex -- or even defining it -- given all the notions of \"identity\" lurking around in there.  For example, we could enumerate the subjectAltName, but then someone defines [a new way of embedding telephone numbers](https://datatracker.ietf.org/doc/html/rfc8226).  The only way to be sure is to require that the whole certificate be the same, but you probably also want to allow signature key rotation, so really you want the whole cert to be the same except for the public key.  This is not functionality provided by any X.509 library that I'm aware of.\r\n\r\nI think the underlying confusion here is around what layers are responsible for what.  Compare to HTTPS:\r\n\r\n* The application layer provides the identifier you're supposed to be authenticating (host name in the URL)\r\n* TLS only provides a *set of identifiers* that are authenticated\r\n* It's up the the application layer to verify that the authenticated identifiers are acceptable\r\n\r\n(This is true even with extensions like [exported authenticators](https://datatracker.ietf.org/doc/draft-ietf-tls-exported-authenticator/) that allow the set of identifiers to change.) All this PR is proposing is a similar division of labor in the MLS case.",
+              "createdAt": "2022-01-20T13:04:35Z",
+              "updatedAt": "2022-01-20T13:04:35Z"
+            }
+          ]
+        }
+      ]
     },
     {
       "number": 510,
@@ -39269,24 +39380,26 @@
       "id": "PR_kwDOBoyH6c4v0_cY",
       "title": "Careful truncation",
       "url": "https://github.com/mlswg/mls-protocol/pull/524",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "bifurcation",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "As @kkohbrok noted [on the mailing list](https://mailarchive.ietf.org/arch/msg/mls/P8CiOeQy3lev7s5vbnaRkPwRa1Q/), the current truncation algorithm breaks parent hashes.  This PR implements the \"careful truncation\" algorithm he proposes.",
       "createdAt": "2021-12-14T14:45:18Z",
-      "updatedAt": "2022-01-14T20:33:57Z",
+      "updatedAt": "2022-01-20T20:49:57Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "2de18dce6939cf7cbb619d5824e2560c6e5efd57",
       "headRepository": "mlswg/mls-protocol",
       "headRefName": "ph-trunc",
       "headRefOid": "15d265dc830e8a7848937f1f63ef91d17ed5d131",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2022-01-20T20:49:56Z",
+      "mergedAt": "2022-01-20T20:49:56Z",
+      "mergedBy": "bifurcation",
+      "mergeCommit": {
+        "oid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f"
+      },
       "comments": [
         {
           "author": "raphaelrobert",
@@ -39294,6 +39407,13 @@
           "body": "I think this should be good to go?",
           "createdAt": "2022-01-10T20:37:47Z",
           "updatedAt": "2022-01-10T20:37:47Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Merging this for now to un-break the spec.  I will work with Marta to see if we can make a follow-up that removes redundant nodes, so that we can get back to more aggressive truncation.",
+          "createdAt": "2022-01-20T20:49:35Z",
+          "updatedAt": "2022-01-20T20:49:35Z"
         }
       ],
       "reviews": [
@@ -39513,13 +39633,13 @@
       "labels": [],
       "body": "Signatures as specified in the MLS protocol document are ambiguous, in the sense that signatures produced for one purpose in the protocol can be (maliciously) used in a different place of the protocol.\r\nIndeed, we found that for example, a `KeyPackage` can have the same serialization as `MLSPlaintextTBS`, which proves that one signature could be accepted for different structures.\r\n\r\nThe collisions we have found so far are quite artificial, so it is not super clear how to exploit this, but at least it makes it impossible to have provable security.\r\n\r\nThe solution is pretty simple, we simply prefix each signed value with a label, in a fashion similar to `ExpandWithLabel`.\r\nThat way, when calling `SignWithLabel` you can give the structure name in the `Label` argument.",
       "createdAt": "2021-12-16T11:56:57Z",
-      "updatedAt": "2022-01-11T08:52:46Z",
+      "updatedAt": "2022-01-21T16:29:02Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
-      "baseRefOid": "6754a8edc9d77c902643d37a519b9a546ab00b4e",
+      "baseRefOid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f",
       "headRepository": "TWal/mls-protocol",
       "headRefName": "twal_signature",
-      "headRefOid": "4c0c8bfaa0c5e4eb3adad656b6fd02479598d0bd",
+      "headRefOid": "55ad81138bc6eb43e92b036b4142cb87362b8263",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
@@ -39661,13 +39781,13 @@
       "labels": [],
       "body": "Our proposal\r\n============\r\n\r\nThe parent hash construction currently authenticates only the public keys in the ratchet tree and does not protect other tree contents, notably the credentials at the leaves.\r\nConsequently, a malicious member can tamper with the credentials before sending a Welcome package to a new member, even if it cannot tamper with the public keys.\r\n\r\nInstead of using the tree resolution in the parent hash computation, we propose to use the tree hash.\r\n\r\nThe last time this was discussed on the list, it was agreed that it would be better to use tree hashes from a security point of view, but it was felt that complexity-wise that the recipient of a Welcome message would have to do O(n^2) work.\r\nA more thorough analysis shows that processing a Welcome message can be done in O(n*log(log(n))).\r\nThe result is that each signature captures the full tree contents including leaf credentials, which provides better authentication guarantees for member identities.\r\n\r\nEfficient algorithm to process a Commit\r\n=======================================\r\n\r\nWhen processing Commits, the implementation can store the tree hashes of every subtree.\r\nThat way, with n being the number of leaves, you can process each proposal in O(log(n)) and each UpdatePath in O(log(n)).\r\nThen you can check the parent hash when processing a Commit in O(p*log(n)) where p is the number of proposals.\r\n\r\nEfficient (enough) algorithm to process a Welcome\r\n=================================================\r\n\r\nWhen processing a Welcome message, we need to do the parent hash verification procedure.\r\nTo do it with the new parent hash, we need to compute tree hashes of subtrees at the last time they were updated.\r\nThis can be done using the following modified tree hash:\r\n\r\n    OldTreeHash(leaf, excluded_leaves) = Hash(leaf) if leaf not in excluded_leaves\r\n    OldTreeHash(leaf, excluded_leaves) = Hash(blank leaf) if leaf in excluded_leaves\r\n    OldTreeHash(node, excluded_leaves) = Hash(node.content | OldTreeHash(node.left, left_excluded_leaves) | OldTreeHash(node.right, right_excluded_leaves))\r\n    where left_excluded_leaves = leaves that are in excluded_leaves and in node.left (same for right_excluded_leaves).\r\n    and `excluded_leaves` are removed from `node.content.unmerged_leaves`.\r\n\r\nThen we can compute the parent hash for a node `N` with child `C` and sibling `S` using `OldTreeHash(S, N.content.unmerged_leaves)`: this old tree hash don't change when Adds are applied to the tree.\r\n\r\nIn the next paragraph, we will see that we can compute the parent hash for every node in `O(n*log(n))`.\r\n\r\nLet `h` be the height of the tree (so `h = log(n)`). There are `O(2^{h-i})` nodes at height `i`, and computing the parent hash for a node at height `i` is done in `O(2^i)`.\r\nHence, the complexity for the parent hash verification procedure is:\r\n\r\n      \\sum_{i=1}^h O(2^i 2^{h-i})\r\n    = \\sum_{i=1}^h O(2^h)\r\n    = O(h 2^h)\r\nAnd since `h = log(n)`, the complexity is `O(n*log(n))`.\r\n\r\nEfficient algorithm to process a Welcome\r\n========================================\r\n\r\nImagine we have the following tree:\r\n\r\n                  W\r\n            ______|______\r\n           /             \\\r\n          U               Y [E, G]\r\n        __|__           __|__\r\n       /     \\         /     \\\r\n      T       V       X [E]   Z [G, H]\r\n     / \\     / \\     / \\     / \\\r\n    A   B   C   D   E   F   G   H\r\n\r\nFor each node `N`, `OldTreeHash(N, excluded_leaves)` will be called with different values for `excluded_leaves`.\r\n\r\nFor example, if the sibling is always the right child, then:\r\n- `OldTreeHash(H, .)` will be called with 1 time with `. = [H]` (when computing the parent hash of `Z`) and 2 times with `. = []` (when computing the parent hash of `Y` and `W`)\r\n- `OldTreeHash(Z, .)` will be called with 1 time with `. = [G]` (when computing the parent hash of `Y`) and 1 time with `. = []` (when computing the parent hash of `W`)\r\n\r\nIf the sibling is always the left child, then:\r\n- `OldTreeHash(A, .)` will be called 3 times with `. = []` (when computing the parent hash of `T`, `U`, `W`)\r\n- `OldTreeHash(T, .)` will be called 2 times with `. = []` (when computing the parent hash of `U`, `W`)\r\n\r\nWe can see that some values are computed several times, which means that the whole computation could be sped up using memoization.\r\n\r\nTo estimate the speedup, we will estimate with how many values for `excluded_leaves` is called `OldTreeHash(N, .)` for each node `N`. Summing up these values will give a complexity, which will be `O(n*log(log(n)))`.\r\n\r\nLet `node.parent[k]` be the `k`th parent of `node`, and `node.leaves` be the set of leaves in the subtree rooted at `node`.\r\nThen, each call of `OldTreeHash(node, excluded_leaves)` will have `excluded_leaves = Intersection(node.parent[k].unmerged_leaves, node.leaves)` for some `k`.\r\nLet's note this set `excluded_leaves_k`.\r\nThe tree has the invariant that if `i <= j` then `excluded_leaves_j` is a subset of `excluded_leaves_i` (i.e. the sets `excluded_leaves_k` are decreasing).\r\n\r\nLet d be the depth of `node` (with the root being at depth 1). Then, the set `excluded_leaves_set := {excluded_leaves_1, ..., excluded_leaves_{d-1}}` corresponds to the values for `excluded_leaves` in the calls to `OldTreeHash(N, .)`.\r\n\r\nFirst bound: `|excluded_leaves_set| <= d-1 <= d` because it is defined using `d-1` values.\r\nSecond bound: `|excluded_leaves_set| <= 2^{h-d}+1` because `|excluded_leaves_0| <= 2^{h-d}` and the sets `excluded_leaves_k` are decreasing.\r\nTherefore: for a node at depth d, `|excluded_leaves_set| <= min(d, 2^{h-d}+1)`\r\n\r\nThe complexity to do the parent hash verification procedure is therefore in `O(sum_{i=1}^h 2^i min(i, 2^{h-i}+1))`.\r\n\r\nLet's estimate this complexity more explicitly:\r\n\r\n       sum_{i=1}^h 2^i min(i, 2^{h-i}+1)\r\n    <= (sum_{i=1}^t i 2^i) + (sum_{i=t+1}^h 2^i (2^{h-i}+1)) [for all t]\r\n    =  (2 (t-1) 2^t + 2) + ((h-t) 2^h + 2^{h+1} - 2^{t+1}) [for all t]\r\n\r\nFor the first inequality, we split the sum in two parts and use `min(i, 2^{h-i}+1) <= i` in the left part and `min(i, 2^{h-i}+1) <= 2^{h-i}+1` in the right part.\r\nFor the second equality, it can be derived using the formula for geometric sum.\r\n\r\nIf we take `t = h - log(h)`, we can compute that the left part is `O(2^h)` and the right part is `O(log(h)*2^h)`.\r\n\r\nTherefore, the parent hash verification procedure complexity is `O(log(h)*2^h) = O(n*log(log(n)))`.\r\n\r\nOne might say that adding memoization has a cost and isn't in O(1), but here it is: using the fact that `excluded_leaves_k` are decreasing, if you process the tree in a bottom-up or top-down way, you only have to compare the length of the current `excluded_leaves` to the length of the previous one, and it tells you if you need to recompute the tree hash.\r\n\r\nThe current parent hash is not super fast\r\n=========================================\r\n\r\nIn the worst case, if most internal nodes are blank, then computing the parent hash for a node is in O(size of its subtree), which give an O(n*log(n)) complexity as we saw in the section about the naive algorithm.\r\n\r\nWhen processing a Commit, if most of the internal nodes are blank, then computing the new parent hashes is in O(n) which is quite slow.",
       "createdAt": "2021-12-16T12:54:02Z",
-      "updatedAt": "2022-01-11T11:51:28Z",
+      "updatedAt": "2022-01-21T16:59:47Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
-      "baseRefOid": "6754a8edc9d77c902643d37a519b9a546ab00b4e",
+      "baseRefOid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f",
       "headRepository": "TWal/mls-protocol",
       "headRefName": "twal_parent_hash",
-      "headRefOid": "1b258b36729258c939a8cf43e07f21d1da32a9ce",
+      "headRefOid": "9a8d5d3627cf26d74776538d22ffcf17500c0515",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
@@ -39714,6 +39834,13 @@
           "body": "> @raphaelrobert To be honest, I didn't find of highly convincing attacks. However what motivates me for this change is that with the current parent hash, there is a some room for tree modification which makes my gut feeling tell me that if someone think hard enough about this a convincing attack can be discovered. If we include the sibling tree hash in the parent hash then the parent hash makes everything super rigid and I don't see any starting point for an attack where the parent hash would be the weak link. (In fact we can tamper the tree when the last tree modification is an Add-only commit, because in every parent hash the added leaf is removed from the tree hash, so we can tamper its KeyPackage)\r\n> \r\n> I'm not sure to understand your last paragraph, do you suggest to keep the resolution but include the whole `ParentNode` and `KeyPackage` instead of only their `hpke_public_key`?\r\n\r\nThinking about it again, it would only partially solve the problem. The tree hash would be stronger indeed.\r\n\r\n> About cross-group attacks: we can easily avoid such attacks by including the group id in the signature of key packages. In the current design, this means adding a mandatory-when-comitting-with-path extension (like the ParentHash extension).\r\n\r\nI think that's a good idea! Given the group ID is immutable, new joiners should not have issues verifying the signatures.\r\n\r\n",
           "createdAt": "2022-01-11T11:51:28Z",
           "updatedAt": "2022-01-11T11:51:28Z"
+        },
+        {
+          "author": "TWal",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I fixed the \"right edge to the tree problems\", I believe the procedure is now correct. The naive O(n log n) algorithm to process a Welcome message still works, I believe the O(n log log n) algorithm can be adapted but that's not 100% trivial.\r\n\r\nAs asked yesterday, here is in more details the algorithm to process a Commit\r\n\r\n# Complexity to process a Commit\r\n\r\nI believe we can expect from any efficient implementation to cache the tree hash of every subtree of the ratchet tree, because if this is not cached, then computing the tree hash at each epoch is in O(n), which is slow.\r\n\r\nWe have to recompute some of these cached values when processing a Proposal or an UpdatePath. When doing so, O(log n) of these values change, and by computing them bottom-up, we can compute each of them in O(1) giving a O(log n) complexity in total.\r\nTherefore, updating these cached values when processing a Commit with p proposals is in O(p log n) which is fast.\r\n\r\nThe parent hash of a node has to be updated when processing an UpdatePath. We notice that doing so, every node that need parent hash recomputation has no unmerged leaves. Therefore every parent hash can be computed in O(1) by using the cached sibling tree hash, and updating the parent hashes is therefore in O(log n).",
+          "createdAt": "2022-01-21T16:59:47Z",
+          "updatedAt": "2022-01-21T16:59:47Z"
         }
       ],
       "reviews": []
@@ -40121,7 +40248,7 @@
       "labels": [],
       "body": "Fixes #531 ",
       "createdAt": "2022-01-19T17:21:12Z",
-      "updatedAt": "2022-01-19T17:21:12Z",
+      "updatedAt": "2022-01-20T15:16:24Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
@@ -40132,7 +40259,15 @@
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
-      "comments": [],
+      "comments": [
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@TWal suggests moving everything to `MLS 1.0` instead.  Will do.",
+          "createdAt": "2022-01-20T15:16:24Z",
+          "updatedAt": "2022-01-20T15:16:24Z"
+        }
+      ],
       "reviews": []
     },
     {
@@ -40147,7 +40282,7 @@
       "labels": [],
       "body": "#532 proposes to remove redundancy between version fields and ciphersuites by removing the version fields.  This PR removes the version from the ciphersuite instead.",
       "createdAt": "2022-01-19T18:38:38Z",
-      "updatedAt": "2022-01-19T18:38:38Z",
+      "updatedAt": "2022-01-20T15:45:54Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
@@ -40158,7 +40293,22 @@
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
-      "comments": [],
+      "comments": [
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@raphaelrobert suggests adding some advisory text in the extensibility section to the effect that future versions of the protocol should consider whether they want to keep all defined ciphersuites.",
+          "createdAt": "2022-01-20T15:37:44Z",
+          "updatedAt": "2022-01-20T15:37:44Z"
+        },
+        {
+          "author": "seanturner",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@raphaelrobert here is some text we put in RFC 8447 (IANA registries for TLS) that was also included in the IANA registry to warn about cipher suites getting weaker over time. This could be modified to mention culling at different version.\r\n\r\n    WARNING: : Cryptographic algorithms and parameters will be\r\n    broken or weakened over time. Blindly implementing cipher\r\n    suites listed here is not advised. Implementers and users\r\n    need to check that the cryptographic algorithms listed continue\r\n    to provide the expected level of security.",
+          "createdAt": "2022-01-20T15:45:54Z",
+          "updatedAt": "2022-01-20T15:45:54Z"
+        }
+      ],
       "reviews": []
     },
     {
@@ -40166,26 +40316,144 @@
       "id": "PR_kwDOBoyH6c4xSKP5",
       "title": "Add missing word",
       "url": "https://github.com/mlswg/mls-protocol/pull/545",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "stefunctional",
-      "authorAssociation": "NONE",
+      "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "",
       "createdAt": "2022-01-19T19:48:09Z",
-      "updatedAt": "2022-01-19T19:48:09Z",
+      "updatedAt": "2022-01-20T16:46:45Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
       "headRepository": "stefunctional/mls-protocol",
       "headRefName": "missing-word",
       "headRefOid": "c75594d534594568949d1cf6a7deeb26c2524982",
+      "closedAt": "2022-01-20T16:46:45Z",
+      "mergedAt": "2022-01-20T16:46:45Z",
+      "mergedBy": "bifurcation",
+      "mergeCommit": {
+        "oid": "60410380e80c0335dec1f535e5db84b827bd212e"
+      },
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOBoyH6c4zKf72",
+          "commit": {
+            "abbreviatedOid": "c75594d"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-01-20T15:14:41Z",
+          "updatedAt": "2022-01-20T15:14:41Z",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "number": 546,
+      "id": "PR_kwDOBoyH6c4xVBWo",
+      "title": "Downgrade MUST to SHOULD for commit senders including all valid commits",
+      "url": "https://github.com/mlswg/mls-protocol/pull/546",
+      "state": "OPEN",
+      "author": "tomleavy",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Addresses the comments in ( Resolves #542 )\r\n\r\nSince a member performing a commit including all valid proposals within an epoch is best effort, it makes sense to downgrade the requirement from MUST to SHOULD. \r\n\r\nIMO, MUST should be reserved for instances where the receiver would throw an error in the condition the sender did not 100% comply with the rule. Since in this case it is not a hard error under certain conditions, such as the member performing the commit having not received a proposal in transit while generating the commit, SHOULD is a better choice.",
+      "createdAt": "2022-01-20T14:32:56Z",
+      "updatedAt": "2022-01-21T21:18:32Z",
+      "baseRepository": "mlswg/mls-protocol",
+      "baseRefName": "main",
+      "baseRefOid": "f02d296844fef310d417485100ae0a2e32feb9c7",
+      "headRepository": "tomleavy/mls-protocol",
+      "headRefName": "commit-must-should",
+      "headRefOid": "f1b0ec9659472e572c9d70f855d484ba83bd2cd4",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [
+        {
+          "author": "raphaelrobert",
+          "authorAssociation": "MEMBER",
+          "body": "I'm not sure this PR addresses the issues raised in #542, especially regarding the redundancy of proposals. I would suggest the following:\r\n\r\n4. The sender of a commit SHOULD use all valid non-redundant proposals it has received\r\n5. In the event that a valid non-redundant proposal is omitted from the next Commit, the sender of the proposal SHOULD retransmit it in the new epoch\r\n",
+          "createdAt": "2022-01-20T17:31:57Z",
+          "updatedAt": "2022-01-20T17:31:57Z"
+        },
+        {
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Re: non-redundant: I'm not sure we need to say \"valid non-redundant\".  We can just include non-redundancy in the definition of \"valid\".\r\n\r\nRe: retransmit: I would frame this as \"If a group member sent a proposal within an epoch that was not included in a Commit that initiates the next epoch, then the proposer MAY retransmit the proposal in the new epoch.\"",
+          "createdAt": "2022-01-20T20:53:27Z",
+          "updatedAt": "2022-01-20T20:53:27Z"
+        },
+        {
+          "author": "tomleavy",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I believe the existing language in the \"if there are multiple proposals ...\" paragraph covers the non-redundant aspect of the requirements.\r\n\r\nHow about this for retransmit? I can push a new commit if we think this helps\r\n\r\n\"The Commit MUST NOT combine proposals sent within different epochs. In the event that a valid proposal is omitted from the next Commit, and that proposal is still valid in the current epoch, the sender of the proposal MAY retransmit it.\"",
+          "createdAt": "2022-01-21T21:18:31Z",
+          "updatedAt": "2022-01-21T21:18:31Z"
+        }
+      ],
+      "reviews": [
+        {
+          "id": "PRR_kwDOBoyH6c4zKftf",
+          "commit": {
+            "abbreviatedOid": "f1b0ec9"
+          },
+          "author": "bifurcation",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-01-20T15:14:03Z",
+          "updatedAt": "2022-01-20T15:14:03Z",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "number": 547,
+      "id": "PR_kwDOBoyH6c4xX9C7",
+      "title": "Domain separation for KeyPackage and Proposal references",
+      "url": "https://github.com/mlswg/mls-protocol/pull/547",
+      "state": "OPEN",
+      "author": "kkohbrok",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "It doesn't seem super critical, but I think right now there could be a collision between references to Update/Add proposals and KeyPackages. Also, it's essentially free and it just feels wrong not to have proper domain separation for these values \ud83d\ude2c.",
+      "createdAt": "2022-01-21T10:03:45Z",
+      "updatedAt": "2022-01-21T18:01:08Z",
+      "baseRepository": "mlswg/mls-protocol",
+      "baseRefName": "main",
+      "baseRefOid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f",
+      "headRepository": "kkohbrok/mls-protocol",
+      "headRefName": "separate_reference_spaces",
+      "headRefOid": "cf1e0adaa7408a76117d39f3cec1be506f208015",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
       "comments": [],
-      "reviews": []
+      "reviews": [
+        {
+          "id": "PRR_kwDOBoyH6c4zQJVW",
+          "commit": {
+            "abbreviatedOid": "cf1e0ad"
+          },
+          "author": "Bren2010",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2022-01-21T18:01:08Z",
+          "updatedAt": "2022-01-21T18:01:08Z",
+          "comments": []
+        }
+      ]
     }
   ]
 }
