@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2022-01-23T01:04:35.759526+00:00",
+  "timestamp": "2022-01-25T01:11:04.184165+00:00",
   "repo": "mlswg/mls-protocol",
   "labels": [
     {
@@ -39781,7 +39781,7 @@
       "labels": [],
       "body": "Our proposal\r\n============\r\n\r\nThe parent hash construction currently authenticates only the public keys in the ratchet tree and does not protect other tree contents, notably the credentials at the leaves.\r\nConsequently, a malicious member can tamper with the credentials before sending a Welcome package to a new member, even if it cannot tamper with the public keys.\r\n\r\nInstead of using the tree resolution in the parent hash computation, we propose to use the tree hash.\r\n\r\nThe last time this was discussed on the list, it was agreed that it would be better to use tree hashes from a security point of view, but it was felt that complexity-wise that the recipient of a Welcome message would have to do O(n^2) work.\r\nA more thorough analysis shows that processing a Welcome message can be done in O(n*log(log(n))).\r\nThe result is that each signature captures the full tree contents including leaf credentials, which provides better authentication guarantees for member identities.\r\n\r\nEfficient algorithm to process a Commit\r\n=======================================\r\n\r\nWhen processing Commits, the implementation can store the tree hashes of every subtree.\r\nThat way, with n being the number of leaves, you can process each proposal in O(log(n)) and each UpdatePath in O(log(n)).\r\nThen you can check the parent hash when processing a Commit in O(p*log(n)) where p is the number of proposals.\r\n\r\nEfficient (enough) algorithm to process a Welcome\r\n=================================================\r\n\r\nWhen processing a Welcome message, we need to do the parent hash verification procedure.\r\nTo do it with the new parent hash, we need to compute tree hashes of subtrees at the last time they were updated.\r\nThis can be done using the following modified tree hash:\r\n\r\n    OldTreeHash(leaf, excluded_leaves) = Hash(leaf) if leaf not in excluded_leaves\r\n    OldTreeHash(leaf, excluded_leaves) = Hash(blank leaf) if leaf in excluded_leaves\r\n    OldTreeHash(node, excluded_leaves) = Hash(node.content | OldTreeHash(node.left, left_excluded_leaves) | OldTreeHash(node.right, right_excluded_leaves))\r\n    where left_excluded_leaves = leaves that are in excluded_leaves and in node.left (same for right_excluded_leaves).\r\n    and `excluded_leaves` are removed from `node.content.unmerged_leaves`.\r\n\r\nThen we can compute the parent hash for a node `N` with child `C` and sibling `S` using `OldTreeHash(S, N.content.unmerged_leaves)`: this old tree hash don't change when Adds are applied to the tree.\r\n\r\nIn the next paragraph, we will see that we can compute the parent hash for every node in `O(n*log(n))`.\r\n\r\nLet `h` be the height of the tree (so `h = log(n)`). There are `O(2^{h-i})` nodes at height `i`, and computing the parent hash for a node at height `i` is done in `O(2^i)`.\r\nHence, the complexity for the parent hash verification procedure is:\r\n\r\n      \\sum_{i=1}^h O(2^i 2^{h-i})\r\n    = \\sum_{i=1}^h O(2^h)\r\n    = O(h 2^h)\r\nAnd since `h = log(n)`, the complexity is `O(n*log(n))`.\r\n\r\nEfficient algorithm to process a Welcome\r\n========================================\r\n\r\nImagine we have the following tree:\r\n\r\n                  W\r\n            ______|______\r\n           /             \\\r\n          U               Y [E, G]\r\n        __|__           __|__\r\n       /     \\         /     \\\r\n      T       V       X [E]   Z [G, H]\r\n     / \\     / \\     / \\     / \\\r\n    A   B   C   D   E   F   G   H\r\n\r\nFor each node `N`, `OldTreeHash(N, excluded_leaves)` will be called with different values for `excluded_leaves`.\r\n\r\nFor example, if the sibling is always the right child, then:\r\n- `OldTreeHash(H, .)` will be called with 1 time with `. = [H]` (when computing the parent hash of `Z`) and 2 times with `. = []` (when computing the parent hash of `Y` and `W`)\r\n- `OldTreeHash(Z, .)` will be called with 1 time with `. = [G]` (when computing the parent hash of `Y`) and 1 time with `. = []` (when computing the parent hash of `W`)\r\n\r\nIf the sibling is always the left child, then:\r\n- `OldTreeHash(A, .)` will be called 3 times with `. = []` (when computing the parent hash of `T`, `U`, `W`)\r\n- `OldTreeHash(T, .)` will be called 2 times with `. = []` (when computing the parent hash of `U`, `W`)\r\n\r\nWe can see that some values are computed several times, which means that the whole computation could be sped up using memoization.\r\n\r\nTo estimate the speedup, we will estimate with how many values for `excluded_leaves` is called `OldTreeHash(N, .)` for each node `N`. Summing up these values will give a complexity, which will be `O(n*log(log(n)))`.\r\n\r\nLet `node.parent[k]` be the `k`th parent of `node`, and `node.leaves` be the set of leaves in the subtree rooted at `node`.\r\nThen, each call of `OldTreeHash(node, excluded_leaves)` will have `excluded_leaves = Intersection(node.parent[k].unmerged_leaves, node.leaves)` for some `k`.\r\nLet's note this set `excluded_leaves_k`.\r\nThe tree has the invariant that if `i <= j` then `excluded_leaves_j` is a subset of `excluded_leaves_i` (i.e. the sets `excluded_leaves_k` are decreasing).\r\n\r\nLet d be the depth of `node` (with the root being at depth 1). Then, the set `excluded_leaves_set := {excluded_leaves_1, ..., excluded_leaves_{d-1}}` corresponds to the values for `excluded_leaves` in the calls to `OldTreeHash(N, .)`.\r\n\r\nFirst bound: `|excluded_leaves_set| <= d-1 <= d` because it is defined using `d-1` values.\r\nSecond bound: `|excluded_leaves_set| <= 2^{h-d}+1` because `|excluded_leaves_0| <= 2^{h-d}` and the sets `excluded_leaves_k` are decreasing.\r\nTherefore: for a node at depth d, `|excluded_leaves_set| <= min(d, 2^{h-d}+1)`\r\n\r\nThe complexity to do the parent hash verification procedure is therefore in `O(sum_{i=1}^h 2^i min(i, 2^{h-i}+1))`.\r\n\r\nLet's estimate this complexity more explicitly:\r\n\r\n       sum_{i=1}^h 2^i min(i, 2^{h-i}+1)\r\n    <= (sum_{i=1}^t i 2^i) + (sum_{i=t+1}^h 2^i (2^{h-i}+1)) [for all t]\r\n    =  (2 (t-1) 2^t + 2) + ((h-t) 2^h + 2^{h+1} - 2^{t+1}) [for all t]\r\n\r\nFor the first inequality, we split the sum in two parts and use `min(i, 2^{h-i}+1) <= i` in the left part and `min(i, 2^{h-i}+1) <= 2^{h-i}+1` in the right part.\r\nFor the second equality, it can be derived using the formula for geometric sum.\r\n\r\nIf we take `t = h - log(h)`, we can compute that the left part is `O(2^h)` and the right part is `O(log(h)*2^h)`.\r\n\r\nTherefore, the parent hash verification procedure complexity is `O(log(h)*2^h) = O(n*log(log(n)))`.\r\n\r\nOne might say that adding memoization has a cost and isn't in O(1), but here it is: using the fact that `excluded_leaves_k` are decreasing, if you process the tree in a bottom-up or top-down way, you only have to compare the length of the current `excluded_leaves` to the length of the previous one, and it tells you if you need to recompute the tree hash.\r\n\r\nThe current parent hash is not super fast\r\n=========================================\r\n\r\nIn the worst case, if most internal nodes are blank, then computing the parent hash for a node is in O(size of its subtree), which give an O(n*log(n)) complexity as we saw in the section about the naive algorithm.\r\n\r\nWhen processing a Commit, if most of the internal nodes are blank, then computing the new parent hashes is in O(n) which is quite slow.",
       "createdAt": "2021-12-16T12:54:02Z",
-      "updatedAt": "2022-01-21T16:59:47Z",
+      "updatedAt": "2022-01-24T18:04:46Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f",
@@ -39841,6 +39841,20 @@
           "body": "I fixed the \"right edge to the tree problems\", I believe the procedure is now correct. The naive O(n log n) algorithm to process a Welcome message still works, I believe the O(n log log n) algorithm can be adapted but that's not 100% trivial.\r\n\r\nAs asked yesterday, here is in more details the algorithm to process a Commit\r\n\r\n# Complexity to process a Commit\r\n\r\nI believe we can expect from any efficient implementation to cache the tree hash of every subtree of the ratchet tree, because if this is not cached, then computing the tree hash at each epoch is in O(n), which is slow.\r\n\r\nWe have to recompute some of these cached values when processing a Proposal or an UpdatePath. When doing so, O(log n) of these values change, and by computing them bottom-up, we can compute each of them in O(1) giving a O(log n) complexity in total.\r\nTherefore, updating these cached values when processing a Commit with p proposals is in O(p log n) which is fast.\r\n\r\nThe parent hash of a node has to be updated when processing an UpdatePath. We notice that doing so, every node that need parent hash recomputation has no unmerged leaves. Therefore every parent hash can be computed in O(1) by using the cached sibling tree hash, and updating the parent hashes is therefore in O(log n).",
           "createdAt": "2022-01-21T16:59:47Z",
           "updatedAt": "2022-01-21T16:59:47Z"
+        },
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Since this also came up, here's a situation that showcases the benefits from including credentials in the parent hash.\r\n\r\nAlice is in a group with Bob and some others. Bob has already made a commit in the course of the group's history, thus and signing a parent hash extension in this leaf KeyPackage.\r\n\r\nAlice now adds Charly to the group.\r\n\r\nWith the parent hash mechanism as-is, Charly can see that Bob has at some point made a commit and with his parent hash attested to the fact that a certain set of public keys were in the tree when Bob made the commit. However, Charly can not rule out the possibility that Alice has generated a bunch of credentials, and used them to sign KeyPackages that include the public keys that Bob attested to (although of course she does not own the corresponding private keys).\r\n\r\nWith the proposed parent hash mechanism, Charly can rule out this possibility, since Bob attested not only to the public keys, but also to the credentials in the leaf KeyPackages.\r\n\r\nSome notes on this scenario (and parent hashes in general):\r\n* Alice's ability to forge meaningful KeyPackages should be limited, since Charly can verify them with the AS. So while Alice might not be able to make it look like Bob is in a group of clients of Alice's choosing, Charly still has no way of asserting who Bob thinks is actually in the group.\r\n* Including Credentials in the parent hash could limit the amount deniability that can be achieved by vanilla MLS, although, for example, an extension could in theory change the way the parent hash works.\r\n* In both scenarios, Charly's ability to figure out what Bob thinks the group looks like is best-effort, since Bob's direct path might have been overwritten to any degree by others since his last (full) commit.\r\n* Ways to get more attestation, disregarding deniability completely:\r\n  * have Bob (in addition to parent hashes) put the group id, epoch and some form of the roster (e.g. full credentials or just hashes) in a KeyPackage extension upon commit\r\n  * cut the time until a new group member learns about who is actually in the group on a best-effort basis: Demand that after processing a commit that contains an Add, a group member must send an (empty) application message as a way of attesting to the current state of the group",
+          "createdAt": "2022-01-24T07:48:27Z",
+          "updatedAt": "2022-01-24T07:48:27Z"
+        },
+        {
+          "author": "MartaMularczyk",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I was going through some examples to verify that the procedure is correct. I think I found two cases where it may be incorrect. @TWal could you check the examples?\r\n1. What happens if some nodes in the subtree of the sibling (Y in your examples) have been truncated since the commit?\r\n2.  See this file [parent_hash.txt](https://github.com/mlswg/mls-protocol/files/7927786/parent_hash.txt) (the trees get large)",
+          "createdAt": "2022-01-24T18:04:46Z",
+          "updatedAt": "2022-01-24T18:04:46Z"
         }
       ],
       "reviews": []
@@ -40427,7 +40441,7 @@
       "labels": [],
       "body": "It doesn't seem super critical, but I think right now there could be a collision between references to Update/Add proposals and KeyPackages. Also, it's essentially free and it just feels wrong not to have proper domain separation for these values \ud83d\ude2c.",
       "createdAt": "2022-01-21T10:03:45Z",
-      "updatedAt": "2022-01-21T18:01:08Z",
+      "updatedAt": "2022-01-24T13:44:01Z",
       "baseRepository": "mlswg/mls-protocol",
       "baseRefName": "main",
       "baseRefOid": "28489f2c85c9bee07b0d4aff3b81b5fb59572e8f",
@@ -40438,7 +40452,22 @@
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
-      "comments": [],
+      "comments": [
+        {
+          "author": "TWal",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I also thought about this but didn't see what are the security implications.\r\n\r\nIn any case, that's always good hygiene and doesn't cost much!",
+          "createdAt": "2022-01-24T13:24:27Z",
+          "updatedAt": "2022-01-24T13:24:27Z"
+        },
+        {
+          "author": "kkohbrok",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Yeah, no particular security implications. It just seems right to do it this way and it doesn't seem to hurt.",
+          "createdAt": "2022-01-24T13:44:01Z",
+          "updatedAt": "2022-01-24T13:44:01Z"
+        }
+      ],
       "reviews": [
         {
           "id": "PRR_kwDOBoyH6c4zQJVW",
