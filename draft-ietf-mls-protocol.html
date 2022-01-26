@@ -3251,7 +3251,7 @@ Where KDFLabel is specified as:
 
 struct {
     uint16 length = Length;
-    opaque label&lt;7..255&gt; = "mls10 " + Label;
+    opaque label&lt;7..255&gt; = "MLS 1.0 " + Label;
     opaque context&lt;0..2^32-1&gt; = Context;
 } KDFLabel;
 
