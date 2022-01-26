@@ -1310,12 +1310,16 @@ Table of Contents
    and Commits refer to Proposals they cover.  These identifiers are
    computed as follows:
 
-opaque HashReference[16];
+   opaque HashReference[16];
 
-MakeHashRef(value) = KDF.expand(KDF.extract("", value), "MLS 1.0 ref", 16)
+   MakeKeyPackageRef(value) = KDF.expand(
+     KDF.extract("", value), "MLS 1.0 KeyPackage Reference", 16)
 
-HashReference KeyPackageRef;
-HashReference ProposalRef;
+   MakeProposalRef(value) = KDF.expand(
+     KDF.extract("", value), "MLS 1.0 Proposal Reference", 16)
+
+   HashReference KeyPackageRef;
+   HashReference ProposalRef;
 
    For a KeyPackageRef, the value input is the encoded KeyPackage, and
    the ciphersuite specified in the KeyPackage determines the KDF used.
