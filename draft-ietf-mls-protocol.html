@@ -1293,12 +1293,10 @@ in size ranging from two to thousands.<a href="#section-abstract-1" class="pilcr
                 <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="xref">10.1</a>.  <a href="#name-required-capabilities" class="xref">Required Capabilities</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="xref">10.2</a>.  <a href="#name-linking-a-new-group-to-an-e" class="xref">Linking a New Group to an Existing Group</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2.2.1">
-                    <p id="section-toc.1-1.10.2.2.2.1.1"><a href="#section-10.2.1" class="xref">10.2.1</a>.  <a href="#name-sub-group-branching" class="xref">Sub-group Branching</a></p>
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="xref">10.2</a>.  <a href="#name-reinitialization" class="xref">Reinitialization</a></p>
 </li>
-                </ul>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="xref">10.3</a>.  <a href="#name-sub-group-branching" class="xref">Sub-group Branching</a></p>
 </li>
             </ul>
 </li>
@@ -3146,7 +3144,7 @@ its GroupContext.<a href="#section-7.6-5" class="pilcrow">¶</a></p>
 These effects are described in their respective subsections of <a href="#proposals" class="xref">Section 11.1</a>.
 The following general rules apply:<a href="#section-7.6-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.6-7.1">The <code>group_id</code> and <code>extensions</code> fields are constant.<a href="#section-7.6-7.1" class="pilcrow">¶</a>
+<li class="normal" id="section-7.6-7.1">The <code>group_id</code> field is constant.<a href="#section-7.6-7.1" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-7.6-7.2">The <code>epoch</code> field increments by one for each Commit message that
 is processed.<a href="#section-7.6-7.2" class="pilcrow">¶</a>
@@ -3154,11 +3152,15 @@ is processed.<a href="#section-7.6-7.2" class="pilcrow">¶</a>
           <li class="normal" id="section-7.6-7.3">The <code>tree_hash</code> is updated to represent the current tree and
 credentials.<a href="#section-7.6-7.3" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-7.6-7.4">The <code>confirmed_transcript_hash</code> is updated with the data for an
-MLSPlaintext message encoding a Commit message in two parts:<a href="#section-7.6-7.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-7.6-7.4">The <code>confirmed_transcript_hash</code> field is updated with the data for an
+MLSPlaintext message encoding a Commit message as described below.<a href="#section-7.6-7.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-7.6-7.5">The <code>extensions</code> field changes when a GroupContextExtensions proposal is
+committed.<a href="#section-7.6-7.5" class="pilcrow">¶</a>
 </li>
         </ul>
-<div class="alignLeft art-text artwork" id="section-7.6-8">
+<p id="section-7.6-8">The <code>confirmed_transcript_hash</code> is updated with an MLSPlaintext in two steps:<a href="#section-7.6-8" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-7.6-9">
 <pre>
 struct {
     WireFormat wire_format;
@@ -3184,16 +3186,16 @@ confirmed_transcript_hash_[n] =
 interim_transcript_hash_[n+1] =
     Hash(confirmed_transcript_hash_[n] ||
         MLSPlaintextCommitAuthData_[n]);
-</pre><a href="#section-7.6-8" class="pilcrow">¶</a>
+</pre><a href="#section-7.6-9" class="pilcrow">¶</a>
 </div>
-<p id="section-7.6-9">Thus the <code>confirmed_transcript_hash</code> field in a GroupContext object represents a
+<p id="section-7.6-10">Thus the <code>confirmed_transcript_hash</code> field in a GroupContext object represents a
 transcript over the whole history of MLSPlaintext Commit messages, up to the
 confirmation_tag field of the most recent Commit.  The confirmation
 tag is then included in the transcript for the next epoch.  The interim
 transcript hash is computed by new members using the confirmation_tag of the
-GroupInfo struct, while existing members can compute it directly.<a href="#section-7.6-9" class="pilcrow">¶</a></p>
-<p id="section-7.6-10">As shown above, when a new group is created, the <code>interim_transcript_hash</code> field
-is set to the zero-length octet string.<a href="#section-7.6-10" class="pilcrow">¶</a></p>
+GroupInfo struct, while existing members can compute it directly.<a href="#section-7.6-10" class="pilcrow">¶</a></p>
+<p id="section-7.6-11">As shown above, when a new group is created, the <code>interim_transcript_hash</code> field
+is set to the zero-length octet string.<a href="#section-7.6-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="update-paths">
@@ -3452,34 +3454,30 @@ from injecting a PSK thus depends on both the entropy of the PSK and the risk of
 compromise.  These factors are outside of the scope of this document, but should
 be considered by application designers relying on PSKs.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 <p id="section-8.2-4">Each PSK in MLS has a type that designates how it was provisioned.
-External PSKs are provided by the application, while recovery and re-init PSKs
+External PSKs are provided by the application, while resumption PSKs
 are derived from the MLS key schedule and used in cases where it is
-necessary to authenticate a member's participation in a prior group state.
-In particular, in addition to external PSK types, a PSK derived from within MLS
-may be used in the following cases:<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-8.2-5.1">Re-Initialization: If during the lifetime of a group, the group members
-decide to switch to a more secure ciphersuite or newer protocol version,
-a PSK can be used to carry entropy from the old group forward into a new
-group with the desired parameters.<a href="#section-8.2-5.1" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-8.2-5.2">Branching: A PSK may be used to bootstrap a subset of current group
-members into a new group. This applies if a subset of current group
-members wish to branch based on the current group state.<a href="#section-8.2-5.2" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-8.2-6">The injection of one or more PSKs into the key schedule is signaled in two ways:
-1) as a <code>PreSharedKey</code> proposal, and 2) in the <code>GroupSecrets</code> object of a
-Welcome message sent to new members added in that epoch.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-8.2-7">
+necessary to authenticate a member's participation in a prior epoch.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">The injection of one or more PSKs into the key schedule is signaled in two ways:
+Existing members are informed via PreSharedKey proposals covered by a Commit,
+and new members added in the Commit are informed via GroupSecrets object in the
+Welcome message corresponding to the Commit.  To ensure that existing and new
+members compute the same PSK input to the key schedule, the Commit and
+GroupSecrets objects MUST indicate the same set of PSKs, in the same order.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8.2-6">
 <pre>
 enum {
   reserved(0),
   external(1),
-  reinit(2),
-  branch(3)
+  resumption(2),
   (255)
 } PSKType;
+
+enum {
+  reserved(0),
+  application(1),
+  reinit(2),
+  branch(3),
+} ResumptionPSKUsage;
 
 struct {
   PSKType psktype;
@@ -3487,11 +3485,8 @@ struct {
     case external:
       opaque psk_id&lt;0..255&gt;;
 
-    case reinit:
-      opaque psk_group_id&lt;0..255&gt;;
-      uint64 psk_epoch;
-
-    case branch:
+    case resumption:
+      ResumptionPSKUsage usage;
       opaque psk_group_id&lt;0..255&gt;;
       uint64 psk_epoch;
   }
@@ -3501,15 +3496,15 @@ struct {
 struct {
     PreSharedKeyID psks&lt;0..2^16-1&gt;;
 } PreSharedKeys;
-</pre><a href="#section-8.2-7" class="pilcrow">¶</a>
+</pre><a href="#section-8.2-6" class="pilcrow">¶</a>
 </div>
-<p id="section-8.2-8">On receiving a Commit with a <code>PreSharedKey</code> proposal or a GroupSecrets object
+<p id="section-8.2-7">On receiving a Commit with a <code>PreSharedKey</code> proposal or a GroupSecrets object
 with the <code>psks</code> field set, the receiving Client includes them in the key
 schedule in the order listed in the Commit, or in the <code>psks</code> field respectively.
 For resumption PSKs, the PSK is defined as the <code>resumption_secret</code> of the group and
 epoch specified in the <code>PreSharedKeyID</code> object. Specifically, <code>psk_secret</code> is
-computed as follows:<a href="#section-8.2-8" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-8.2-9">
+computed as follows:<a href="#section-8.2-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8.2-8">
 <pre>
 struct {
     PreSharedKeyID id;
@@ -3523,13 +3518,13 @@ psk_input_[i] = ExpandWithLabel(psk_extracted_[i], "derived psk", PSKLabel, KDF.
 psk_secret_[0] = 0
 psk_secret_[i] = KDF.Extract(psk_input[i-1], psk_secret_[i-1])
 psk_secret     = psk_secret[n]
-</pre><a href="#section-8.2-9" class="pilcrow">¶</a>
+</pre><a href="#section-8.2-8" class="pilcrow">¶</a>
 </div>
-<p id="section-8.2-10">Here <code>0</code> represents the all-zero vector of length <code>KDF.Nh</code>. The <code>index</code> field in
+<p id="section-8.2-9">Here <code>0</code> represents the all-zero vector of length <code>KDF.Nh</code>. The <code>index</code> field in
 <code>PSKLabel</code> corresponds to the index of the PSK in the <code>psk</code> array, while the
 <code>count</code> field contains the total number of PSKs.  In other words, the PSKs are
-chained together with KDF.Extract invocations, as follows:<a href="#section-8.2-10" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-8.2-11">
+chained together with KDF.Extract invocations, as follows:<a href="#section-8.2-9" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8.2-10">
 <pre>
                 0                                   0       = psk_secret_[0]
                 |                                   |
@@ -3545,10 +3540,10 @@ psk_[1] --&gt; KDF.Extract --&gt; ExpandWithLabel --&gt; KDF.Extract = psk_secre
                 |                                   |
                 V                                   V
 psk_[n] --&gt; KDF.Extract --&gt; ExpandWithLabel --&gt; KDF.Extract = psk_secret_[n]
-</pre><a href="#section-8.2-11" class="pilcrow">¶</a>
+</pre><a href="#section-8.2-10" class="pilcrow">¶</a>
 </div>
-<p id="section-8.2-12">In particular, if there are no PreSharedKey proposals in a given Commit, then
-the resulting <code>psk_secret</code> is <code>psk_secret_[0]</code>, the all-zero vector.<a href="#section-8.2-12" class="pilcrow">¶</a></p>
+<p id="section-8.2-11">In particular, if there are no PreSharedKey proposals in a given Commit, then
+the resulting <code>psk_secret</code> is <code>psk_secret_[0]</code>, the all-zero vector.<a href="#section-8.2-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="secret-tree">
@@ -3749,17 +3744,13 @@ to refresh those values after a Commit is processed.<a href="#section-8.6-5" cla
         <h3 id="name-resumption-secret">
 <a href="#section-8.7" class="section-number selfRef">8.7. </a><a href="#name-resumption-secret" class="section-name selfRef">Resumption Secret</a>
         </h3>
-<p id="section-8.7-1">The main MLS key schedule provides a <code>resumption_secret</code> which can provide extra
-security in some cross-group operations.<a href="#section-8.7-1" class="pilcrow">¶</a></p>
-<p id="section-8.7-2">The application SHOULD specify an upper limit on the number of past
+<p id="section-8.7-1">The main MLS key schedule provides a <code>resumption_secret</code> that is used as a PSK
+to inject entropy from one epoch into another.  This functionality is used in the
+reinitialization and branching processes described in <a href="#reinitialization" class="xref">Section 10.2</a> and
+<a href="#sub-group-branching" class="xref">Section 10.3</a>, but may be used by applications for other purposes.<a href="#section-8.7-1" class="pilcrow">¶</a></p>
+<p id="section-8.7-2">Some uses of resumption PSKs might call for the use of PSKs from historical
+epochs. The application SHOULD specify an upper limit on the number of past
 epochs for which the <code>resumption_secret</code> may be stored.<a href="#section-8.7-2" class="pilcrow">¶</a></p>
-<p id="section-8.7-3">There are two ways in which a <code>resumption_secret</code> can be used: to re-initialize
-the group with different parameters, or to create a
-sub-group of an existing group as detailed in <a href="#pre-shared-keys" class="xref">Section 8.2</a>.<a href="#section-8.7-3" class="pilcrow">¶</a></p>
-<p id="section-8.7-4">Resumption keys are distinguished from exporter keys in that they have specific
-use inside the MLS protocol, whereas the use of exporter secrets may be
-decided by an external application. They are thus derived separately to avoid
-key material reuse.<a href="#section-8.7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-authentication-keys">
@@ -4145,14 +4136,16 @@ the new members are added) and a Welcome message<a href="#section-10-3.5" class=
 </li>
       </ul>
 <p id="section-10-4">The recipient of a Welcome message processes it as described in
-<a href="#joining-via-welcome-message" class="xref">Section 11.2.1.2</a>.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<a href="#joining-via-welcome-message" class="xref">Section 11.2.1.2</a>.  If application context informs the recipient that
+the Welcome should reflect the creation of a new group (for example, due to a
+branch or reinitialization), then the recipient MUST verify that the epoch value
+in the GroupInfo is equal to 1.<a href="#section-10-4" class="pilcrow">¶</a></p>
 <p id="section-10-5">In principle, the above process could be streamlined by having the
 creator directly create a tree and choose a random value for first
 epoch's epoch secret.  We follow the steps above because it removes
 unnecessary choices, by which, for example, bad randomness could be
 introduced.  The only choices the creator makes here are its own
-KeyPackage, the leaf secret from which the Commit is built, and the
-intermediate key pairs along the direct path to the root.<a href="#section-10-5" class="pilcrow">¶</a></p>
+KeyPackage and the leaf secret from which the Commit is built.<a href="#section-10-5" class="pilcrow">¶</a></p>
 <div id="required-capabilities">
 <section id="section-10.1">
         <h3 id="name-required-capabilities">
@@ -4179,31 +4172,75 @@ contains a <code>required_capabilities</code> extension that requires capabilili
 supported by all current members.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="linking-a-new-group-to-an-existing-group">
+<div id="reinitialization">
 <section id="section-10.2">
-        <h3 id="name-linking-a-new-group-to-an-e">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-linking-a-new-group-to-an-e" class="section-name selfRef">Linking a New Group to an Existing Group</a>
+        <h3 id="name-reinitialization">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-reinitialization" class="section-name selfRef">Reinitialization</a>
         </h3>
-<p id="section-10.2-1">A new group may be tied to an already existing group for the purpose of
-re-initializing the existing group, or to branch into a sub-group.
-Re-initializing an existing group may be used, for example, to restart the group
-with a different ciphersuite or protocol version. Branching may be used to
-bootstrap a new group consisting of a subset of current group members, based on
-the current group state.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">In both cases, the <code>psk_nonce</code> included in the <code>PreSharedKeyID</code> object must be a
-randomly sampled nonce of length <code>KDF.Nh</code> to avoid key re-use.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<div id="sub-group-branching">
-<section id="section-10.2.1">
-          <h4 id="name-sub-group-branching">
-<a href="#section-10.2.1" class="section-number selfRef">10.2.1. </a><a href="#name-sub-group-branching" class="section-name selfRef">Sub-group Branching</a>
-          </h4>
-<p id="section-10.2.1-1">If a client wants to create a subgroup of an existing group, they MAY choose to
-include a <code>PreSharedKeyID</code> in the <code>GroupSecrets</code> object of the Welcome message choosing
-the <code>psktype</code> <code>branch</code>, the <code>group_id</code> of the group from which a subgroup is to
-be branched, as well as an epoch within the number of epochs for which a
-<code>resumption_secret</code> is kept.<a href="#section-10.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-1">A group may be reinitialized by creating a new group with the same membership
+and different parameters, and linking it to the old group via a resumption PSK.
+The members of a group reinitialize it using the following steps:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-10.2-2">
+<li id="section-10.2-2.1">A member of the old group sends a ReInit proposal (see <a href="#reinit" class="xref">Section 11.1.5</a>)<a href="#section-10.2-2.1" class="pilcrow">¶</a>
+</li>
+          <li id="section-10.2-2.2">A member of the old group sends a Commit covering the ReInit proposal<a href="#section-10.2-2.2" class="pilcrow">¶</a>
+</li>
+          <li id="section-10.2-2.3">
+            <p id="section-10.2-2.3.1">A member of the old group sends a Welcome message for the new group that
+matches the ReInit<a href="#section-10.2-2.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-2.3.2.1">The <code>group_id</code>, <code>version</code>, and <code>cipher_suite</code> fields in the Welcome
+message MUST be the same as the corresponding fields in the ReInit
+proposal.<a href="#section-10.2-2.3.2.1" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-10.2-2.3.2.2">The <code>epoch</code> in the Welcome message MUST be 1<a href="#section-10.2-2.3.2.2" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-10.2-2.3.2.3">The Welcome MUST specify a PreSharedKey of type <code>resumption</code> with usage
+<code>reinit</code>.  The <code>group_id</code> must match the old group, and the <code>epoch</code> must
+indicate the epoch after the Commit covering the ReInit.<a href="#section-10.2-2.3.2.3" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-10.2-2.3.2.4">The <code>psk_nonce</code> included in the <code>PreSharedKeyID</code> of the resumption PSK
+MUST be a randomly sampled nonce of length <code>KDF.Nh</code>, for the KDF defined
+by the new grou's ciphersuite.<a href="#section-10.2-2.3.2.4" class="pilcrow">¶</a>
+</li>
+            </ul>
+</li>
+        </ol>
+<p id="section-10.2-3">Note that these three steps may be done by the same group member or different
+members.  For example, if a group member sends a commit with an inline ReInit
+proposal (steps 1 and 2), but then goes offline, another group member may send
+the corresponding Welcome.  This flexibility avoids situations where a group
+gets stuck between steps 2 and 3.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">Resumption PSKs with usage <code>reinit</code> MUST NOT be used in other contexts.  A
+PreSharedKey proposal with type <code>resumption</code> and usage <code>reinit</code> MUST be
+considered invalid.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="sub-group-branching">
+<section id="section-10.3">
+        <h3 id="name-sub-group-branching">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-sub-group-branching" class="section-name selfRef">Sub-group Branching</a>
+        </h3>
+<p id="section-10.3-1">A new group can be formed from a subset of an existing group's members, using
+the same parameters as the old group.  The creator of the group indicates this
+situation by including a PreSharedKey of type <code>resumption</code> with usage <code>branch</code>
+in the Welcome message that creates the branched subgroup.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">A client receiving a Welcome including a PreSharedKey of type <code>resumption</code> with
+usage <code>branch</code> MUST verify that the new group reflects a subgroup branched from
+the referenced group.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.3-3.1">The <code>version</code> and <code>ciphersuite</code> values in the Welcome MUST be the same as
+those used by the old group.<a href="#section-10.3-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-10.3-3.2">Each KeyPackage in a leaf node of the new group's tree MUST be a leaf in the
+old group's tree at the epoch indicated in the PreSharedKey.<a href="#section-10.3-3.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.3-4">In addition, to avoid key re-use, the <code>psk_nonce</code> included in the
+<code>PreSharedKeyID</code> object MUST be a randomly sampled nonce of length <code>KDF.Nh</code>.<a href="#section-10.3-4" class="pilcrow">¶</a></p>
+<p id="section-10.3-5">Resumption PSKs with usage <code>branch</code> MUST NOT be used in other contexts.  A
+PreSharedKey proposal with type <code>resumption</code> and usage <code>branch</code> MUST be
+considered invalid.<a href="#section-10.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4423,9 +4460,9 @@ corresponds to the order of the <code>PreSharedKey</code> proposals in the Commi
           <h4 id="name-reinit">
 <a href="#section-11.1.5" class="section-number selfRef">11.1.5. </a><a href="#name-reinit" class="section-name selfRef">ReInit</a>
           </h4>
-<p id="section-11.1.5-1">A ReInit proposal represents a request to re-initialize the group with different
+<p id="section-11.1.5-1">A ReInit proposal represents a request to reinitialize the group with different
 parameters, for example, to increase the version number or to change the
-ciphersuite. The re-initialization is done by creating a completely new group
+ciphersuite. The reinitialization is done by creating a completely new group
 and shutting down the old one.<a href="#section-11.1.5-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-11.1.5-2">
 <pre>
@@ -4438,13 +4475,8 @@ struct {
 </pre><a href="#section-11.1.5-2" class="pilcrow">¶</a>
 </div>
 <p id="section-11.1.5-3">A member of the group applies a ReInit proposal by waiting for the committer to
-send the Welcome message and by checking that the <code>group_id</code> and the parameters
-of the new group corresponds to the ones specified in the proposal. The Welcome
-message MUST specify exactly one pre-shared key with <code>psktype = reinit</code>, and with
-<code>psk_group_id</code> and <code>psk_epoch</code> equal to the <code>group_id</code> and <code>epoch</code> of the
-existing group after the Commit containing the <code>reinit</code> Proposal was processed.
-The Welcome message may specify the inclusion of other pre-shared keys with a
-<code>psktype</code> different from <code>reinit</code>.<a href="#section-11.1.5-3" class="pilcrow">¶</a></p>
+send the Welcome message that matches the ReInit, according to the criteria in
+<a href="#reinitialization" class="xref">Section 10.2</a>.<a href="#section-11.1.5-3" class="pilcrow">¶</a></p>
 <p id="section-11.1.5-4">If a ReInit proposal is included in a Commit, it MUST be the only proposal
 referenced by the Commit. If other non-ReInit proposals have been sent during
 the epoch, the committer SHOULD prefer them over the ReInit proposal, allowing
@@ -4839,12 +4871,26 @@ key packages, and any PSKs for which a proposal was included in the Commit. The
 order of the <code>psks</code> MUST be the same as the order of PreSharedKey proposals in the
 <code>proposals</code> vector.<a href="#section-11.2-16.10" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-11.2-16.11">If a ReInit proposal was part of the Commit, the committer MUST create a new
+          <li class="normal" id="section-11.2-16.11">
+            <p id="section-11.2-16.11.1">If a ReInit proposal was part of the Commit, the committer MUST create a new
 group with the parameters specified in the ReInit proposal,
 and with the same members as the original group.
-The Welcome message MUST include a <code>PreSharedKeyID</code> with <code>psktype</code>
-            <code>reinit</code> and with <code>psk_group_id</code> and <code>psk_epoch</code> corresponding to the current
-group and the epoch after the commit was processed.<a href="#section-11.2-16.11" class="pilcrow">¶</a>
+The Welcome message MUST include a <code>PreSharedKeyID</code> with the following
+parameters:<a href="#section-11.2-16.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.2-16.11.2.1">
+                <code>psktype</code>: <code>resumption</code><a href="#section-11.2-16.11.2.1" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-11.2-16.11.2.2">
+                <code>usage</code>: <code>reinit</code><a href="#section-11.2-16.11.2.2" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-11.2-16.11.2.3">
+                <code>group_id</code>: The group ID for the current group<a href="#section-11.2-16.11.2.3" class="pilcrow">¶</a>
+</li>
+              <li class="normal" id="section-11.2-16.11.2.4">
+                <code>epoch</code>: The epoch that the group will be in after this Commit<a href="#section-11.2-16.11.2.4" class="pilcrow">¶</a>
+</li>
+            </ul>
 </li>
         </ul>
 <p id="section-11.2-17">A member of the group applies a Commit message by taking the following steps:<a href="#section-11.2-17" class="pilcrow">¶</a></p>
@@ -4916,20 +4962,9 @@ for this message, as described below, and verify that it is the same as the
           <li class="normal" id="section-11.2-18.12">If the above checks are successful, consider the new GroupContext object
 as the current state of the group.<a href="#section-11.2-18.12" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-11.2-18.13">
-            <p id="section-11.2-18.13.1">If the Commit included a ReInit proposal, the client MUST NOT use the group to
+          <li class="normal" id="section-11.2-18.13">If the Commit included a ReInit proposal, the client MUST NOT use the group to
 send messages anymore. Instead, it MUST wait for a Welcome message from the committer
-and check that<a href="#section-11.2-18.13.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11.2-18.13.2.1">The <code>version</code>, <code>cipher_suite</code> and <code>extensions</code> fields of the new group
-corresponds to the ones in the <code>ReInit</code> proposal, and that the <code>version</code>
-is greater than or equal to that of the original group.<a href="#section-11.2-18.13.2.1" class="pilcrow">¶</a>
-</li>
-              <li class="normal" id="section-11.2-18.13.2.2">The <code>psks</code> field in the Welcome message includes a <code>PreSharedKeyID</code> with
-<code>psktype</code> = <code>reinit</code>, and <code>psk_epoch</code> and <code>psk_group_id</code> equal to the epoch
-and group ID of the original group after processing the Commit.<a href="#section-11.2-18.13.2.2" class="pilcrow">¶</a>
-</li>
-            </ul>
+meeting the requirements of <a href="#reinitialization" class="xref">Section 10.2</a>.<a href="#section-11.2-18.13" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-11.2-19">The confirmation tag value confirms that the members of the group have arrived
