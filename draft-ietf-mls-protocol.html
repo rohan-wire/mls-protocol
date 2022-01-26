@@ -1352,6 +1352,17 @@ in size ranging from two to thousands.<a href="#section-abstract-1" class="pilcr
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
             <p id="section-toc.1-1.12.1"><a href="#section-12" class="xref">12</a>. <a href="#name-extensibility" class="xref">Extensibility</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="xref">12.1</a>.  <a href="#name-ciphersuites-2" class="xref">Ciphersuites</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="xref">12.2</a>.  <a href="#name-proposals-2" class="xref">Proposals</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="xref">12.3</a>.  <a href="#name-extensions" class="xref">Extensions</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="xref">13</a>. <a href="#name-sequencing-of-state-changes" class="xref">Sequencing of State Changes</a></p>
@@ -5353,65 +5364,115 @@ using the tree for MLS operations.<a href="#section-11.3-13" class="pilcrow">¶<
       <h2 id="name-extensibility">
 <a href="#section-12" class="section-number selfRef">12. </a><a href="#name-extensibility" class="section-name selfRef">Extensibility</a>
       </h2>
-<p id="section-12-1">This protocol includes a mechanism for negotiating extension parameters similar
+<p id="section-12-1">The base MLS protocol can be extended in a few ways.  New ciphersuites can be
+added to enable the use of new cryptographic algorithms.  New types of proposals
+can be used to perform new actions within an epoch.  Extension fields can be
+used to add additional information to the protocol.  In this section, we discuss
+some constraints on these extensibility mechanisms that are necessary to ensure
+broad interoperability.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<div id="ciphersuites-1">
+<section id="section-12.1">
+        <h3 id="name-ciphersuites-2">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-ciphersuites-2" class="section-name selfRef">Ciphersuites</a>
+        </h3>
+<p id="section-12.1-1">As discussed in <a href="#ciphersuites" class="xref">Section 6.1</a>, MLS allows the participants in a group to
+negotiate the cryptographic algorithms used within the group.  This
+extensibility is important for maintaining the security of the protocol over
+time <span>[<a href="#RFC7696" class="xref">RFC7696</a>]</span>.  It also creates a risk of interoperability failure due to
+clients not supporting a common ciphersuite.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2">The ciphersuite registry defined in <a href="#mls-ciphersuites" class="xref">Section 16.1</a> attempts to strike a
+balance on this point.  On the one hand, the base policy for the registry is
+Specification Required, a fairly low bar designed to avoid the need for
+standards work in cases where different ciphers are needed for niche
+applications.  There is a higher bar (Standards Action) for ciphers to set the
+Recommended field in the registry.  This higher bar is there in part to ensure
+that the interoperability implications of new ciphersuites are considered.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.1-3">MLS ciphersuites are defined independent of MLS versions, so that in principle
+the same ciphersuite can be used across versions.  Standards work defining new
+versions of MLS should consider whether it is desirable for the new version to
+be compatible with existing ciphersuites, or whether the new version should rule
+out some ciphersuites. For example, a new version could follow the example of
+HTTP/2, which restricted the set of allowed TLS ciphers (see Section 9.2.2 of
+<span>[<a href="#RFC7540" class="xref">RFC7540</a>]</span>.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="proposals-1">
+<section id="section-12.2">
+        <h3 id="name-proposals-2">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-proposals-2" class="section-name selfRef">Proposals</a>
+        </h3>
+<p id="section-12.2-1">Commit messages do not have an extension field because the set of protocols is
+extensible.  As discussed in <a href="#commit" class="xref">Section 11.2</a>, Proposals with a non-default proposal
+type MUST NOT be included in a commit unless the proposal type is supported by
+all the members of the group that will process the Commit.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extensions">
+<section id="section-12.3">
+        <h3 id="name-extensions">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-extensions" class="section-name selfRef">Extensions</a>
+        </h3>
+<p id="section-12.3-1">This protocol includes a mechanism for negotiating extension parameters similar
 to the one in TLS <span>[<a href="#RFC8446" class="xref">RFC8446</a>]</span>.  In TLS, extension negotiation is one-to-one: The
 client offers extensions in its ClientHello message, and the server expresses
 its choices for the session with extensions in its ServerHello and
 EncryptedExtensions messages.  In MLS, extensions appear in the following
-places:<a href="#section-12-1" class="pilcrow">¶</a></p>
+places:<a href="#section-12.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-12-2.1">In KeyPackages, to describe client capabilities and aspects of their
-participation in the group (once in the ratchet tree)<a href="#section-12-2.1" class="pilcrow">¶</a>
+<li class="normal" id="section-12.3-2.1">In KeyPackages, to describe client capabilities and aspects of their
+participation in the group (once in the ratchet tree)<a href="#section-12.3-2.1" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-2.2">In the GroupInfo, to tell new members of a group what parameters are
+          <li class="normal" id="section-12.3-2.2">In the GroupInfo, to tell new members of a group what parameters are
 being used by the group, and to provide any additional details required to
-join the group<a href="#section-12-2.2" class="pilcrow">¶</a>
+join the group<a href="#section-12.3-2.2" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-2.3">In the GroupContext object, to ensure that all members of the group have the
-same view of the parameters in use<a href="#section-12-2.3" class="pilcrow">¶</a>
+          <li class="normal" id="section-12.3-2.3">In the GroupContext object, to ensure that all members of the group have the
+same view of the parameters in use<a href="#section-12.3-2.3" class="pilcrow">¶</a>
 </li>
-      </ul>
-<p id="section-12-3">In other words, an application can use GroupContext extensions to ensure that
+        </ul>
+<p id="section-12.3-3">In other words, an application can use GroupContext extensions to ensure that
 all members of the group agree on a set of parameters. Clients indicate their
 support for parameters in KeyPackage extensions. New members of a group are
 informed of the group's GroupContext extensions via the
 <code>group_context_extensions</code> field in the GroupInfo object. The <code>other_extensions</code>
 field in a GroupInfo object can be used to provide additional parameters to new
-joiners that are used to join the group.<a href="#section-12-3" class="pilcrow">¶</a></p>
-<p id="section-12-4">This extension mechanism is designed to allow for secure and forward-compatible
+joiners that are used to join the group.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
+<p id="section-12.3-4">This extension mechanism is designed to allow for secure and forward-compatible
 negotiation of extensions.  For this to work, implementations MUST correctly
-handle extensible fields:<a href="#section-12-4" class="pilcrow">¶</a></p>
+handle extensible fields:<a href="#section-12.3-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-12-5.1">A client that posts a KeyPackage MUST support all parameters advertised in
+<li class="normal" id="section-12.3-5.1">A client that posts a KeyPackage MUST support all parameters advertised in
 it.  Otherwise, another client might fail to interoperate by selecting one of
-those parameters.<a href="#section-12-5.1" class="pilcrow">¶</a>
+those parameters.<a href="#section-12.3-5.1" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-5.2">A client initiating a group MUST ignore all unrecognized ciphersuites,
+          <li class="normal" id="section-12.3-5.2">A client initiating a group MUST ignore all unrecognized ciphersuites,
 extensions, and other parameters.  Otherwise, it may fail to interoperate with
-newer clients.<a href="#section-12-5.2" class="pilcrow">¶</a>
+newer clients.<a href="#section-12.3-5.2" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-5.3">A client adding a new member to a group MUST verify that the KeyPackage
+          <li class="normal" id="section-12.3-5.3">A client adding a new member to a group MUST verify that the KeyPackage
 for the new member contains extensions that are consistent with the group's
 extensions.  For each extension in the GroupContext, the KeyPackage MUST
 have an extension of the same type, and the contents of the extension MUST be
 consistent with the value of the extension in the GroupContext, according to
-the semantics of the specific extension.<a href="#section-12-5.3" class="pilcrow">¶</a>
+the semantics of the specific extension.<a href="#section-12.3-5.3" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-5.4">If any extension in a GroupInfo message is unrecognized (i.e., not contained
+          <li class="normal" id="section-12.3-5.4">If any extension in a GroupInfo message is unrecognized (i.e., not contained
 in the corresponding KeyPackage), then the client MUST reject the Welcome
-message and not join the group.<a href="#section-12-5.4" class="pilcrow">¶</a>
+message and not join the group.<a href="#section-12.3-5.4" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-5.5">The extensions populated into a GroupContext object are drawn from those in
-the GroupInfo object, according to the definitions of those extensions.<a href="#section-12-5.5" class="pilcrow">¶</a>
+          <li class="normal" id="section-12.3-5.5">The extensions populated into a GroupContext object are drawn from those in
+the GroupInfo object, according to the definitions of those extensions.<a href="#section-12.3-5.5" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-12-5.6">Any field containing a list of extensions MUST NOT have more than one extension of any given type.<a href="#section-12-5.6" class="pilcrow">¶</a>
+          <li class="normal" id="section-12.3-5.6">Any field containing a list of extensions MUST NOT have more than one extension of any given type.<a href="#section-12.3-5.6" class="pilcrow">¶</a>
 </li>
-      </ul>
-<p id="section-12-6">Note that the latter two requirements mean that all MLS extensions are
+        </ul>
+<p id="section-12.3-6">Note that the latter two requirements mean that all MLS extensions are
 mandatory, in the sense that an extension in use by the group MUST be supported
-by all members of the group.<a href="#section-12-6" class="pilcrow">¶</a></p>
-<p id="section-12-7">This document does not define any way for the parameters of the group to change
-once it has been created; such a behavior could be implemented as an extension.<a href="#section-12-7" class="pilcrow">¶</a></p>
+by all members of the group.<a href="#section-12.3-6" class="pilcrow">¶</a></p>
+<p id="section-12.3-7">This document does not define any way for the parameters of the group to change
+once it has been created; such a behavior could be implemented as an extension.<a href="#section-12.3-7" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="sequencing">
@@ -5771,10 +5832,6 @@ uint16 CipherSuite;
           </thead>
           <tbody>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">MLS</td>
-              <td class="text-left" rowspan="1" colspan="1">The string "MLS" followed by the major and minor version, e.g. "MLS10"</td>
-            </tr>
-            <tr>
               <td class="text-left" rowspan="1" colspan="1">LVL</td>
               <td class="text-left" rowspan="1" colspan="1">The security level</td>
             </tr>
@@ -5831,43 +5888,43 @@ is REQUIRED for a Y-&gt;N transition.<a href="#section-16.1-8.3" class="pilcrow"
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0001</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_128_DHKEMX25519_AES128GCM_SHA256_Ed25519</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0002</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_128_DHKEMP256_AES128GCM_SHA256_P256</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_128_DHKEMP256_AES128GCM_SHA256_P256</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0003</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0004</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_256_DHKEMX448_AES256GCM_SHA512_Ed448</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_256_DHKEMX448_AES256GCM_SHA512_Ed448</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0005</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_256_DHKEMP521_AES256GCM_SHA512_P521</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_256_DHKEMP521_AES256GCM_SHA512_P521</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0006</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_256_DHKEMX448_CHACHA20POLY1305_SHA512_Ed448</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_256_DHKEMX448_CHACHA20POLY1305_SHA512_Ed448</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x0007</td>
-              <td class="text-left" rowspan="1" colspan="1">MLS10_256_DHKEMP384_AES256GCM_SHA384_P384.</td>
+              <td class="text-left" rowspan="1" colspan="1">MLS_256_DHKEMP384_AES256GCM_SHA384_P384.</td>
               <td class="text-left" rowspan="1" colspan="1">Y</td>
               <td class="text-left" rowspan="1" colspan="1">RFC XXXX</td>
             </tr>
@@ -5969,7 +6026,7 @@ ChaCha20Poly1305 is not listed by FIPS 140-2 it is not paired with FIPS 140-2
 compliant curves. The security level of symmetric encryption algorithms and hash
 functions is paired with the security level of the curves.<a href="#section-16.1-14" class="pilcrow">¶</a></p>
 <p id="section-16.1-15">The mandatory-to-implement ciphersuite for MLS 1.0 is
-<code>MLS10_128_DHKEMX25519_AES128GCM_SHA256_Ed25519</code> which uses
+<code>MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519</code> which uses
 Curve25519 for key exchange, AES-128-GCM for HPKE, HKDF over SHA2-256, and
 Ed25519 for signatures.<a href="#section-16.1-15" class="pilcrow">¶</a></p>
 <p id="section-16.1-16">Values with the first byte 255 (decimal) are reserved for Private Use.<a href="#section-16.1-16" class="pilcrow">¶</a></p>
@@ -6418,6 +6475,14 @@ thyla.van.der@merwe.tech<a href="#section-17-1.12" class="pilcrow">¶</a>
 <dt id="RFC5116">[RFC5116]</dt>
         <dd>
 <span class="refAuthor">McGrew, D.</span>, <span class="refTitle">"An Interface and Algorithms for Authenticated Encryption"</span>, <span class="seriesInfo">RFC 5116</span>, <span class="seriesInfo">DOI 10.17487/RFC5116</span>, <time datetime="2008-01" class="refDate">January 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5116">https://www.rfc-editor.org/rfc/rfc5116</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7540">[RFC7540]</dt>
+        <dd>
+<span class="refAuthor">Belshe, M.</span>, <span class="refAuthor">Peon, R.</span>, and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"Hypertext Transfer Protocol Version 2 (HTTP/2)"</span>, <span class="seriesInfo">RFC 7540</span>, <span class="seriesInfo">DOI 10.17487/RFC7540</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7540">https://www.rfc-editor.org/rfc/rfc7540</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7696">[RFC7696]</dt>
+        <dd>
+<span class="refAuthor">Housley, R.</span>, <span class="refTitle">"Guidelines for Cryptographic Algorithm Agility and Selecting Mandatory-to-Implement Algorithms"</span>, <span class="seriesInfo">BCP 201</span>, <span class="seriesInfo">RFC 7696</span>, <span class="seriesInfo">DOI 10.17487/RFC7696</span>, <time datetime="2015-11" class="refDate">November 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7696">https://www.rfc-editor.org/rfc/rfc7696</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8032">[RFC8032]</dt>
         <dd>
