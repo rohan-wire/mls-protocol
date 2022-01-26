@@ -1030,7 +1030,7 @@ svg [stroke="fill"], svg [fill^="#fff"] {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Barnes, et al.</td>
-<td class="center">Expires 24 July 2022</td>
+<td class="center">Expires 30 July 2022</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1043,12 +1043,12 @@ svg [stroke="fill"], svg [fill^="#fff"] {
 <dd class="internet-draft">draft-ietf-mls-protocol-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-01-20" class="published">20 January 2022</time>
+<time datetime="2022-01-26" class="published">26 January 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2022-07-24">24 July 2022</time></dd>
+<dd class="expires"><time datetime="2022-07-30">30 July 2022</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1118,7 +1118,7 @@ in size ranging from two to thousands.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 July 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 30 July 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2683,7 +2683,27 @@ to be used for signatures in MLSPlaintext and the tree signatures.  It MUST be
 the same as the signature algorithm specified in the credential field of the
 KeyPackage objects in the leaves of the tree (including the InitKeys
 used to add new members).<a href="#section-6.1-6" class="pilcrow">¶</a></p>
-<p id="section-6.1-7">The ciphersuites are defined in section <a href="#mls-ciphersuites" class="xref">Section 16.1</a>.<a href="#section-6.1-7" class="pilcrow">¶</a></p>
+<p id="section-6.1-7">To disambiguate different signatures used in MLS, each signed value is prefixed
+by a label as shown below:<a href="#section-6.1-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-6.1-8">
+<pre>
+SignWithLabel(SignatureKey, Label, Content) =
+    Signature.Sign(SignatureKey, SignContent)
+
+VerifyWithLabel(VerificationKey, Label, Content) =
+    Signature.Verify(VerificationKey, SignContent)
+
+Where SignContent is specified as:
+
+struct {
+    opaque label&lt;9..255&gt; = "MLS 1.0 " + Label;
+    opaque content&lt;0..2^32-1&gt; = Content;
+} SignContent;
+</pre><a href="#section-6.1-8" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-9">Here, the functions <code>Signature.Sign</code> and <code>Signature.Verify</code> are defined
+by the signature algorithm.<a href="#section-6.1-9" class="pilcrow">¶</a></p>
+<p id="section-6.1-10">The ciphersuites are defined in section <a href="#mls-ciphersuites" class="xref">Section 16.1</a>.<a href="#section-6.1-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="hash-based-identifiers">
@@ -2808,10 +2828,11 @@ among the set of KeyPackages created by this client.<a href="#section-7-5" class
 <p id="section-7-6">The value for hpke_init_key MUST be a public key for the asymmetric
 encryption scheme defined by cipher_suite. The whole structure
 is signed using the client's signature key. A KeyPackage object
-with an invalid signature field MUST be considered malformed.
-The input to the signature computation comprises all of the fields
-except for the signature field.<a href="#section-7-6" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-7-7">
+with an invalid signature field MUST be considered malformed.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">The signature is computed by the function <code>SignWithLabel</code> with a label
+<code>KeyPackage</code> and a content comprising of all of the fields except for the
+signature field.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-7-8">
 <pre>
 enum {
     reserved(0),
@@ -2834,21 +2855,31 @@ struct {
     opaque endpoint_id&lt;0..255&gt;;
     Credential credential;
     Extension extensions&lt;8..2^32-1&gt;;
+    // SignWithLabel(., "KeyPackageTBS", KeyPackageTBS)
     opaque signature&lt;0..2^16-1&gt;;
 } KeyPackage;
-</pre><a href="#section-7-7" class="pilcrow">¶</a>
+
+struct {
+    ProtocolVersion version;
+    CipherSuite cipher_suite;
+    HPKEPublicKey hpke_init_key;
+    opaque endpoint_id&lt;0..255&gt;;
+    Credential credential;
+    Extension extensions&lt;8..2^32-1&gt;;
+} KeyPackageTBS;
+</pre><a href="#section-7-8" class="pilcrow">¶</a>
 </div>
-<p id="section-7-8">KeyPackage objects MUST contain at least two extensions, one of type
+<p id="section-7-9">KeyPackage objects MUST contain at least two extensions, one of type
 <code>capabilities</code>, and one of
 type <code>lifetime</code>.  The <code>capabilities</code> extension
 allow MLS session establishment to be safe from downgrade attacks on the
 parameters described (as discussed in <a href="#group-creation" class="xref">Section 10</a>), while still only advertising
-one version / ciphersuite per KeyPackage.<a href="#section-7-8" class="pilcrow">¶</a></p>
-<p id="section-7-9">As the <code>KeyPackage</code> is a structure which is stored in the Ratchet
+one version / ciphersuite per KeyPackage.<a href="#section-7-9" class="pilcrow">¶</a></p>
+<p id="section-7-10">As the <code>KeyPackage</code> is a structure which is stored in the Ratchet
 Tree and updated depending on the evolution of this tree, each
 modification of its content MUST be reflected by a change of its
 signature. This allow other members to control the validity of the KeyPackage
-at any time and in particular in the case of a newcomer joining the group.<a href="#section-7-9" class="pilcrow">¶</a></p>
+at any time and in particular in the case of a newcomer joining the group.<a href="#section-7-10" class="pilcrow">¶</a></p>
 <div id="client-capabilities">
 <section id="section-7.1">
         <h3 id="name-client-capabilities">
@@ -3808,8 +3839,11 @@ struct {
           Commit commit;
     }
 
+    // SignWithLabel(., "MLSPlaintextTBS", MLSPlaintextTBS)
     opaque signature&lt;0..2^16-1&gt;;
+    // MAC(confirmation_key, GroupContext.confirmed_transcript_hash)
     optional&lt;MAC&gt; confirmation_tag;
+    // MAC(membership_key, MLSPlaintextTBM);
     optional&lt;MAC&gt; membership_tag;
 } MLSPlaintext;
 
@@ -3856,23 +3890,15 @@ verifying the content signature.<a href="#section-9-8" class="pilcrow">¶</a></p
 <p id="section-9.1-1">The <code>signature</code> field in an MLSPlaintext object is computed using the signing
 private key corresponding to the public key, which was authenticated by the
 credential at the leaf of the tree indicated by the sender field. The signature
-covers the plaintext metadata and message content, which is all of MLSPlaintext
+is computed using <code>SignWithLabel</code> with label <code>"MLSPlaintextTBS"</code> and with a content
+that covers the plaintext metadata and message content, which is all of MLSPlaintext
 except for the <code>signature</code>, the <code>confirmation_tag</code> and <code>membership_tag</code> fields.
-If the sender is a member of the group, the signature also covers the
+If the sender is a member of the group, the content also covers the
 GroupContext for the current epoch, so that signatures are specific to a given
 group and epoch.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-9.1-2">
 <pre>
 struct {
-    select (MLSPlaintextTBS.sender.sender_type) {
-        case member:
-            GroupContext context;
-
-        case preconfigured:
-        case new_member:
-            struct{};
-    }
-
     WireFormat wire_format;
     opaque group_id&lt;0..255&gt;;
     uint64 epoch;
@@ -3889,6 +3915,15 @@ struct {
 
         case commit:
           Commit commit;
+    }
+
+    select (MLSPlaintextTBS.sender.sender_type) {
+        case member:
+        case new_member:
+            GroupContext context;
+
+        case preconfigured:
+            struct{};
     }
 } MLSPlaintextTBS;
 </pre><a href="#section-9.1-2" class="pilcrow">¶</a>
@@ -3937,7 +3972,9 @@ struct {
           Commit commit;
     }
 
+    // SignWithLabel(., "MLSPlaintextTBS", MLSPlaintextTBS)
     opaque signature&lt;0..2^16-1&gt;;
+    // MAC(confirmation_key, GroupContext.confirmed_transcript_hash)
     optional&lt;MAC&gt; confirmation_tag;
     opaque padding&lt;0..2^16-1&gt;;
 } MLSCiphertextContent;
@@ -4912,6 +4949,7 @@ struct {
     Extension other_extensions&lt;0..2^32-1&gt;;
     MAC confirmation_tag;
     KeyPackageRef signer;
+    // SignWithLabel(., "GroupInfoTBS", GroupInfoTBS)
     opaque signature&lt;0..2^16-1&gt;;
 } GroupInfo;
 </pre><a href="#section-11.2.1-2" class="pilcrow">¶</a>

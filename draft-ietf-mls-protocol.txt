@@ -5,7 +5,7 @@
 Network Working Group                                          R. Barnes
 Internet-Draft                                                     Cisco
 Intended status: Informational                             B. Beurdouche
-Expires: 24 July 2022                                    Inria & Mozilla
+Expires: 30 July 2022                                    Inria & Mozilla
                                                                R. Robert
                                                                         
                                                              J. Millican
@@ -14,7 +14,7 @@ Expires: 24 July 2022                                    Inria & Mozilla
                                                                   Google
                                                           K. Cohn-Gordon
                                                     University of Oxford
-                                                         20 January 2022
+                                                         26 January 2022
 
 
               The Messaging Layer Security (MLS) Protocol
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 July 2022.
+   This Internet-Draft will expire on 30 July 2022.
 
 Copyright Notice
 
@@ -1282,6 +1282,25 @@ Table of Contents
    in the credential field of the KeyPackage objects in the leaves of
    the tree (including the InitKeys used to add new members).
 
+   To disambiguate different signatures used in MLS, each signed value
+   is prefixed by a label as shown below:
+
+   SignWithLabel(SignatureKey, Label, Content) =
+       Signature.Sign(SignatureKey, SignContent)
+
+   VerifyWithLabel(VerificationKey, Label, Content) =
+       Signature.Verify(VerificationKey, SignContent)
+
+   Where SignContent is specified as:
+
+   struct {
+       opaque label<9..255> = "MLS 1.0 " + Label;
+       opaque content<0..2^32-1> = Content;
+   } SignContent;
+
+   Here, the functions Signature.Sign and Signature.Verify are defined
+   by the signature algorithm.
+
    The ciphersuites are defined in section Section 16.1.
 
 6.2.  Hash-Based Identifiers
@@ -1403,9 +1422,11 @@ HashReference ProposalRef;
    The value for hpke_init_key MUST be a public key for the asymmetric
    encryption scheme defined by cipher_suite.  The whole structure is
    signed using the client's signature key.  A KeyPackage object with an
-   invalid signature field MUST be considered malformed.  The input to
-   the signature computation comprises all of the fields except for the
-   signature field.
+   invalid signature field MUST be considered malformed.
+
+   The signature is computed by the function SignWithLabel with a label
+   KeyPackage and a content comprising of all of the fields except for
+   the signature field.
 
    enum {
        reserved(0),
@@ -1428,8 +1449,18 @@ HashReference ProposalRef;
        opaque endpoint_id<0..255>;
        Credential credential;
        Extension extensions<8..2^32-1>;
+       // SignWithLabel(., "KeyPackageTBS", KeyPackageTBS)
        opaque signature<0..2^16-1>;
    } KeyPackage;
+
+   struct {
+       ProtocolVersion version;
+       CipherSuite cipher_suite;
+       HPKEPublicKey hpke_init_key;
+       opaque endpoint_id<0..255>;
+       Credential credential;
+       Extension extensions<8..2^32-1>;
+   } KeyPackageTBS;
 
    KeyPackage objects MUST contain at least two extensions, one of type
    capabilities, and one of type lifetime.  The capabilities extension
@@ -2284,8 +2315,11 @@ psk_[n] --> KDF.Extract --> ExpandWithLabel --> KDF.Extract = psk_secret_[n]
              Commit commit;
        }
 
+       // SignWithLabel(., "MLSPlaintextTBS", MLSPlaintextTBS)
        opaque signature<0..2^16-1>;
+       // MAC(confirmation_key, GroupContext.confirmed_transcript_hash)
        optional<MAC> confirmation_tag;
+       // MAC(membership_key, MLSPlaintextTBM);
        optional<MAC> membership_tag;
    } MLSPlaintext;
 
@@ -2332,23 +2366,15 @@ psk_[n] --> KDF.Extract --> ExpandWithLabel --> KDF.Extract = psk_secret_[n]
    The signature field in an MLSPlaintext object is computed using the
    signing private key corresponding to the public key, which was
    authenticated by the credential at the leaf of the tree indicated by
-   the sender field.  The signature covers the plaintext metadata and
-   message content, which is all of MLSPlaintext except for the
-   signature, the confirmation_tag and membership_tag fields.  If the
-   sender is a member of the group, the signature also covers the
+   the sender field.  The signature is computed using SignWithLabel with
+   label "MLSPlaintextTBS" and with a content that covers the plaintext
+   metadata and message content, which is all of MLSPlaintext except for
+   the signature, the confirmation_tag and membership_tag fields.  If
+   the sender is a member of the group, the content also covers the
    GroupContext for the current epoch, so that signatures are specific
    to a given group and epoch.
 
    struct {
-       select (MLSPlaintextTBS.sender.sender_type) {
-           case member:
-               GroupContext context;
-
-           case preconfigured:
-           case new_member:
-               struct{};
-       }
-
        WireFormat wire_format;
        opaque group_id<0..255>;
        uint64 epoch;
@@ -2365,6 +2391,15 @@ psk_[n] --> KDF.Extract --> ExpandWithLabel --> KDF.Extract = psk_secret_[n]
 
            case commit:
              Commit commit;
+       }
+
+       select (MLSPlaintextTBS.sender.sender_type) {
+           case member:
+           case new_member:
+               GroupContext context;
+
+           case preconfigured:
+               struct{};
        }
    } MLSPlaintextTBS;
 
@@ -2407,7 +2442,9 @@ psk_[n] --> KDF.Extract --> ExpandWithLabel --> KDF.Extract = psk_secret_[n]
              Commit commit;
        }
 
+       // SignWithLabel(., "MLSPlaintextTBS", MLSPlaintextTBS)
        opaque signature<0..2^16-1>;
+       // MAC(confirmation_key, GroupContext.confirmed_transcript_hash)
        optional<MAC> confirmation_tag;
        opaque padding<0..2^16-1>;
    } MLSCiphertextContent;
@@ -3309,6 +3346,7 @@ sender_data_nonce = ExpandWithLabel(sender_data_secret, "nonce", ciphertext_samp
        Extension other_extensions<0..2^32-1>;
        MAC confirmation_tag;
        KeyPackageRef signer;
+       // SignWithLabel(., "GroupInfoTBS", GroupInfoTBS)
        opaque signature<0..2^16-1>;
    } GroupInfo;
 
