@@ -1,0 +1,486 @@
+
+opaque HPKEPublicKey<1..2^16-1>;
+
+opaque HashReference[16];
+
+HashReference KeyPackageRef;
+HashReference ProposalRef;
+
+// See RFC 8446 and the IANA TLS SignatureScheme registry
+uint16 SignatureScheme;
+
+// See IANA registry for registered values
+uint16 CredentialType;
+
+struct {
+    opaque identity<0..2^16-1>;
+    SignatureScheme signature_scheme;
+    opaque signature_key<0..2^16-1>;
+} BasicCredential;
+
+struct {
+    opaque cert_data<0..2^16-1>;
+} Certificate;
+
+struct {
+    CredentialType credential_type;
+    select (Credential.credential_type) {
+        case basic:
+            BasicCredential;
+
+        case x509:
+            Certificate chain<1..2^32-1>;
+    };
+} Credential;
+
+enum {
+    reserved(0),
+    mls10(1),
+    (255)
+} ProtocolVersion;
+
+// See IANA registry for registered values
+uint16 ExtensionType;
+
+struct {
+    ExtensionType extension_type;
+    opaque extension_data<0..2^32-1>;
+} Extension;
+
+struct {
+    ProtocolVersion version;
+    CipherSuite cipher_suite;
+    HPKEPublicKey hpke_init_key;
+    opaque endpoint_id<0..255>;
+    Credential credential;
+    Extension extensions<8..2^32-1>;
+    opaque signature<0..2^16-1>;
+} KeyPackage;
+
+struct {
+    ProtocolVersion versions<0..255>;
+    CipherSuite ciphersuites<0..255>;
+    ExtensionType extensions<0..255>;
+    ProposalType proposals<0..255>;
+} Capabilities;
+
+uint64 not_before;
+uint64 not_after;
+
+opaque external_key_id<0..2^16-1>;
+
+opaque parent_hash<0..255>;
+
+struct {
+    HPKEPublicKey public_key;
+    opaque parent_hash<0..255>;
+    HPKEPublicKey original_child_resolution<0..2^32-1>;
+} ParentHashInput;
+
+struct {
+    uint8 present;
+    select (present) {
+        case 0: struct{};
+        case 1: T value;
+    }
+} optional<T>;
+
+struct {
+    uint32 node_index;
+    optional<KeyPackage> key_package;
+} LeafNodeHashInput;
+
+struct {
+    HPKEPublicKey public_key;
+    opaque parent_hash<0..255>;
+    uint32 unmerged_leaves<0..2^32-1>;
+} ParentNode;
+
+struct {
+    uint32 node_index;
+    optional<ParentNode> parent_node;
+    opaque left_hash<0..255>;
+    opaque right_hash<0..255>;
+} ParentNodeTreeHashInput;
+
+struct {
+    opaque group_id<0..255>;
+    uint64 epoch;
+    opaque tree_hash<0..255>;
+    opaque confirmed_transcript_hash<0..255>;
+    Extension extensions<0..2^32-1>;
+} GroupContext;
+
+struct {
+    WireFormat wire_format;
+    opaque group_id<0..255>;
+    uint64 epoch;
+    Sender sender;
+    opaque authenticated_data<0..2^32-1>;
+    ContentType content_type = commit;
+    Commit commit;
+    opaque signature<0..2^16-1>;
+} MLSPlaintextCommitContent;
+
+struct {
+    optional<MAC> confirmation_tag;
+} MLSPlaintextCommitAuthData;
+
+struct {
+    opaque kem_output<0..2^16-1>;
+    opaque ciphertext<0..2^16-1>;
+} HPKECiphertext;
+
+struct {
+    HPKEPublicKey public_key;
+    HPKECiphertext encrypted_path_secret<0..2^32-1>;
+} UpdatePathNode;
+
+struct {
+    KeyPackage leaf_key_package;
+    UpdatePathNode nodes<0..2^32-1>;
+} UpdatePath;
+
+struct {
+    uint16 length = Length;
+    opaque label<7..255> = "mls10 " + Label;
+    opaque context<0..2^32-1> = Context;
+} KDFLabel;
+
+enum {
+  reserved(0),
+  external(1),
+  reinit(2),
+  branch(3)
+  (255)
+} PSKType;
+
+struct {
+  PSKType psktype;
+  select (PreSharedKeyID.psktype) {
+    case external:
+      opaque psk_id<0..255>;
+
+    case reinit:
+      opaque psk_group_id<0..255>;
+      uint64 psk_epoch;
+
+    case branch:
+      opaque psk_group_id<0..255>;
+      uint64 psk_epoch;
+  }
+  opaque psk_nonce<0..255>;
+} PreSharedKeyID;
+
+struct {
+    PreSharedKeyID psks<0..2^16-1>;
+} PreSharedKeys;
+
+struct {
+    PreSharedKeyID id;
+    uint16 index;
+    uint16 count;
+} PSKLabel;
+
+struct {
+    uint32 node = Node;
+    uint32 generation = Generation;
+} TreeContext;
+
+enum {
+    reserved(0),
+    application(1),
+    proposal(2),
+    commit(3),
+    (255)
+} ContentType;
+
+enum {
+    reserved(0),
+    member(1),
+    preconfigured(2),
+    new_member(3),
+    (255)
+} SenderType;
+
+struct {
+    SenderType sender_type;
+    switch (sender_type) {
+        case member:        KeyPackageRef member;
+        case preconfigured: opaque external_key_id<0..255>;
+        case new_member:    struct{};
+    }
+} Sender;
+
+struct {
+    opaque mac_value<0..255>;
+} MAC;
+
+enum {
+  reserved(0),
+  mls_plaintext(1),
+  mls_ciphertext(2),
+  (255)
+} WireFormat;
+
+struct {
+    WireFormat wire_format;
+    opaque group_id<0..255>;
+    uint64 epoch;
+    Sender sender;
+    opaque authenticated_data<0..2^32-1>;
+
+    ContentType content_type;
+    select (MLSPlaintext.content_type) {
+        case application:
+          opaque application_data<0..2^32-1>;
+
+        case proposal:
+          Proposal proposal;
+
+        case commit:
+          Commit commit;
+    }
+
+    opaque signature<0..2^16-1>;
+    optional<MAC> confirmation_tag;
+    optional<MAC> membership_tag;
+} MLSPlaintext;
+
+struct {
+    WireFormat wire_format = mls_ciphertext;
+    opaque group_id<0..255>;
+    uint64 epoch;
+    ContentType content_type;
+    opaque authenticated_data<0..2^32-1>;
+    opaque encrypted_sender_data<0..255>;
+    opaque ciphertext<0..2^32-1>;
+} MLSCiphertext;
+
+struct {
+    select (MLSPlaintextTBS.sender.sender_type) {
+        case member:
+            GroupContext context;
+
+        case preconfigured:
+        case new_member:
+            struct{};
+    }
+
+    WireFormat wire_format;
+    opaque group_id<0..255>;
+    uint64 epoch;
+    Sender sender;
+    opaque authenticated_data<0..2^32-1>;
+
+    ContentType content_type;
+    select (MLSPlaintextTBS.content_type) {
+        case application:
+          opaque application_data<0..2^32-1>;
+
+        case proposal:
+          Proposal proposal;
+
+        case commit:
+          Commit commit;
+    }
+} MLSPlaintextTBS;
+
+struct {
+  MLSPlaintextTBS tbs;
+  opaque signature<0..2^16-1>;
+  optional<MAC> confirmation_tag;
+} MLSPlaintextTBM;
+
+struct {
+    select (MLSCiphertext.content_type) {
+        case application:
+          opaque application_data<0..2^32-1>;
+
+        case proposal:
+          Proposal proposal;
+
+        case commit:
+          Commit commit;
+    }
+
+    opaque signature<0..2^16-1>;
+    optional<MAC> confirmation_tag;
+    opaque padding<0..2^16-1>;
+} MLSCiphertextContent;
+
+struct {
+    opaque group_id<0..255>;
+    uint64 epoch;
+    ContentType content_type;
+    opaque authenticated_data<0..2^32-1>;
+} MLSCiphertextContentAAD;
+
+struct {
+    KeyPackageRef sender;
+    uint32 generation;
+    opaque reuse_guard[4];
+} MLSSenderData;
+
+struct {
+    opaque group_id<0..255>;
+    uint64 epoch;
+    ContentType content_type;
+} MLSSenderDataAAD;
+
+struct {
+    ExtensionType extensions<0..255>;
+    ProposalType proposals<0..255>;
+} RequiredCapabilities;
+
+// See IANA registry for registered values
+uint16 ProposalType;
+
+struct {
+    ProposalType msg_type;
+    select (Proposal.msg_type) {
+        case add:                      Add;
+        case update:                   Update;
+        case remove:                   Remove;
+        case psk:                      PreSharedKey;
+        case reinit:                   ReInit;
+        case external_init:            ExternalInit;
+        case app_ack:                  AppAck;
+        case group_context_extensions: GroupContextExtensions;
+    };
+} Proposal;
+
+struct {
+    KeyPackage key_package;
+} Add;
+
+struct {
+    KeyPackage key_package;
+} Update;
+
+struct {
+    KeyPackageRef removed;
+} Remove;
+
+struct {
+    PreSharedKeyID psk;
+} PreSharedKey;
+
+struct {
+    opaque group_id<0..255>;
+    ProtocolVersion version;
+    CipherSuite cipher_suite;
+    Extension extensions<0..2^32-1>;
+} ReInit;
+
+struct {
+  opaque kem_output<0..2^16-1>;
+} ExternalInit;
+
+struct {
+    KeyPackageRef sender;
+    uint32 first_generation;
+    uint32 last_generation;
+} MessageRange;
+
+struct {
+    MessageRange received_ranges<0..2^32-1>;
+} AppAck;
+
+enum {
+  reserved(0),
+  proposal(1)
+  reference(2),
+  (255)
+} ProposalOrRefType;
+
+struct {
+  ProposalOrRefType type;
+  select (ProposalOrRef.type) {
+    case proposal:  Proposal proposal;
+    case reference: ProposalRef reference;
+  }
+} ProposalOrRef;
+
+struct {
+    ProposalOrRef proposals<0..2^32-1>;
+    optional<UpdatePath> path;
+} Commit;
+
+struct {
+    ProtocolVersion version = mls10;
+    CipherSuite cipher_suite;
+    opaque group_id<0..255>;
+    uint64 epoch;
+    opaque tree_hash<0..255>;
+    opaque interim_transcript_hash<0..255>;
+    Extension group_context_extensions<0..2^32-1>;
+    Extension other_extensions<0..2^32-1>;
+    HPKEPublicKey external_pub;
+    KeyPackageRef signer;
+    opaque signature<0..2^16-1>;
+} PublicGroupState;
+
+struct {
+    opaque group_id<0..255>;
+    uint64 epoch;
+    opaque tree_hash<0..255>;
+    opaque interim_transcript_hash<0..255>;
+    Extension group_context_extensions<0..2^32-1>;
+    Extension other_extensions<0..2^32-1>;
+    HPKEPublicKey external_pub;
+    KeyPackageRef signer;
+} PublicGroupStateTBS;
+
+struct {
+  opaque group_id<0..255>;
+  uint64 epoch;
+  opaque tree_hash<0..255>;
+  opaque confirmed_transcript_hash<0..255>;
+  Extension group_context_extensions<0..2^32-1>;
+  Extension other_extensions<0..2^32-1>;
+  MAC confirmation_tag;
+  KeyPackageRef signer;
+  opaque signature<0..2^16-1>;
+} GroupInfo;
+
+struct {
+  opaque path_secret<1..255>;
+} PathSecret;
+
+struct {
+  opaque joiner_secret<1..255>;
+  optional<PathSecret> path_secret;
+  PreSharedKeys psks;
+} GroupSecrets;
+
+struct {
+  KeyPackageRef new_member<1..255>;
+  HPKECiphertext encrypted_group_secrets;
+} EncryptedGroupSecrets;
+
+struct {
+  ProtocolVersion version = mls10;
+  CipherSuite cipher_suite;
+  EncryptedGroupSecrets secrets<0..2^32-1>;
+  opaque encrypted_group_info<1..2^32-1>;
+} Welcome;
+
+enum {
+    reserved(0),
+    leaf(1),
+    parent(2),
+    (255)
+} NodeType;
+
+struct {
+    NodeType node_type;
+    select (Node.node_type) {
+        case leaf:   KeyPackage key_package;
+        case parent: ParentNode node;
+    };
+} Node;
+
+optional<Node> ratchet_tree<1..2^32-1>;
+
+uint16 CipherSuite;

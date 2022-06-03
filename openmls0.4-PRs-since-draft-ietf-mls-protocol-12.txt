@@ -1,0 +1,7 @@
+f9de42c97223a99a9587a9fc92f8b748a9beb2d7 Use smaller, fixed-size hash-based identifiers (#510)
+43a6dcdbc04aeff809e460e3773b25a19be08ade 384 Ciphersuite Addition (#514)
+3e35dbb41921826ad98c2fdb71cf9340146be0b8 Add protocol version to PGS (#515)
+22511303091bc68165a5208686ad252837f96b3e Recommend against self-Update proposals in Commit (#517)
+7ae42740abd5576b45a11ecbf378d38a95fe993b Forbid self-Update entirely (#519)
+6754a8edc9d77c902643d37a519b9a546ab00b4e Generalize tree extend/truncate algorithms (#522)
+
