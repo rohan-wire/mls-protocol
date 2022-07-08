@@ -1939,7 +1939,7 @@ struct {
     SenderType sender_type;
     switch (sender_type) {
         case member:        KeyPackageRef member;
-        case preconfigured: opaque external_key_id<0..255>;
+        case preconfigured: Credential;
         case new_member:    struct{};
     }
 } Sender;
@@ -2605,13 +2605,13 @@ to the KeyPackage in the Add message.  Recipients MUST verify that the
 MLSPlaintext carrying the Proposal message is validly signed with this key.
 
 The `preconfigured` SenderType is reserved for signers that are pre-provisioned
-to the clients within a group.  If proposals with these sender IDs are to be
+to the clients within a group. If proposals with these credentials are to be
 accepted within a group, the members of the group MUST be provisioned by the
-application with a mapping between these IDs and authorized signing keys.
+application at group creation.
 Recipients MUST verify that the MLSPlaintext carrying the Proposal message is
 validly signed with the corresponding key. To ensure consistent handling of
 external proposals, the application MUST ensure that the members of a group
-have the same mapping and apply the same policies to external proposals.
+apply the same policies to external proposals.
 
 An external proposal MUST be sent as an MLSPlaintext
 object, since the sender will not have the keys necessary to construct an
