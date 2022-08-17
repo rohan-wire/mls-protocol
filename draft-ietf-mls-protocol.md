@@ -1939,7 +1939,7 @@ struct {
     SenderType sender_type;
     switch (sender_type) {
         case member:        KeyPackageRef member;
-        case external: opaque external_key_id<0..255>;
+        case external: uint32 sender_index;
         case new_member:    struct{};
     }
 } Sender;
