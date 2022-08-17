@@ -1930,7 +1930,7 @@ enum {
 enum {
     reserved(0),
     member(1),
-    preconfigured(2),
+    external(2),
     new_member(3),
     (255)
 } SenderType;
@@ -1939,7 +1939,7 @@ struct {
     SenderType sender_type;
     switch (sender_type) {
         case member:        KeyPackageRef member;
-        case preconfigured: opaque external_key_id<0..255>;
+        case external: uint32 sender_index;
         case new_member:    struct{};
     }
 } Sender;
@@ -2034,7 +2034,7 @@ struct {
         case member:
             GroupContext context;
 
-        case preconfigured:
+        case external:
         case new_member:
             struct{};
     }
@@ -2592,10 +2592,10 @@ Add and Remove proposals can be constructed and sent to the group by a party
 that is outside the group.  For example, a Delivery Service might propose to
 remove a member of a group who has been inactive for a long time, or propose adding
 a newly-hired staff member to a group representing a real-world team.  Proposals
-originating outside the group are identified by a `preconfigured` or
+originating outside the group are identified by a `external` or
 `new_member` SenderType in MLSPlaintext.
 
-ReInit proposals can also be sent to the group by a `preconfigured` sender, for
+ReInit proposals can also be sent to the group by a `external` sender, for
 example to enforce a changed policy regarding MLS version or ciphersuite.
 
 The `new_member` SenderType is used for clients proposing that they themselves
@@ -2604,7 +2604,7 @@ MUST be Add. The MLSPlaintext MUST be signed with the private key corresponding
 to the KeyPackage in the Add message.  Recipients MUST verify that the
 MLSPlaintext carrying the Proposal message is validly signed with this key.
 
-The `preconfigured` SenderType is reserved for signers that are pre-provisioned
+The `external` SenderType is reserved for signers that are pre-provisioned
 to the clients within a group.  If proposals with these sender IDs are to be
 accepted within a group, the members of the group MUST be provisioned by the
 application with a mapping between these IDs and authorized signing keys.
@@ -3706,15 +3706,16 @@ Template:
 
 Initial contents:
 
-| Value            | Name                     | Message(s) | Recommended | Reference |
-|:=================|:=========================|:===========|:============|:==========|
-| 0x0000           | RESERVED                 | N/A        | N/A         | RFC XXXX  |
-| 0x0001           | capabilities             | KP         | Y           | RFC XXXX  |
-| 0x0002           | lifetime                 | KP         | Y           | RFC XXXX  |
-| 0x0003           | external_key_id          | KP         | Y           | RFC XXXX  |
-| 0x0004           | parent_hash              | KP         | Y           | RFC XXXX  |
-| 0x0005           | ratchet_tree             | GI         | Y           | RFC XXXX  |
-| 0xff00  - 0xffff | Reserved for Private Use | N/A        | N/A         | RFC XXXX  |
+| Value            | Name                         | Message(s) | Recommended | Reference |
+|:=================|:=============================|:===========|:============|:==========|
+| 0x0000           | RESERVED                     | N/A        | N/A         | RFC XXXX  |
+| 0x0001           | capabilities                 | KP         | Y           | RFC XXXX  |
+| 0x0002           | lifetime                     | KP         | Y           | RFC XXXX  |
+| 0x0003           | external_key_id              | KP         | Y           | RFC XXXX  |
+| 0x0004           | parent_hash                  | KP         | Y           | RFC XXXX  |
+| 0x0005           | ratchet_tree                 | GI         | Y           | RFC XXXX  |
+| 0xff00           | external_senders (temporary) | GI         | Y           | RFC XXXX  |
+| 0xff00  - 0xffff | Reserved for Private Use     | N/A        | N/A         | RFC XXXX  |
 
 ## MLS Proposal Types
 
